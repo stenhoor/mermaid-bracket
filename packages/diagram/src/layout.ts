@@ -17,6 +17,8 @@ export interface LayoutConfig {
   padding: number;
   /** Minimum row height. */
   minRowHeight: number;
+  /** Refs longer than this many characters wrap at their hyphen onto two lines. */
+  refWrapAt: number;
   /**
    * Arms drawn for coordinate brackets (S, P, A). `all` draws one per child as Biblearc does;
    * `ends` draws only the first and last, plus any middle child that is itself a bracket or carries
@@ -34,6 +36,7 @@ export const DEFAULT_LAYOUT: LayoutConfig = {
   titleHeight: 30,
   padding: 8,
   minRowHeight: 26,
+  refWrapAt: 4,
   coordinateArms: 'ends',
 };
 
@@ -49,6 +52,8 @@ export interface ArmBox {
   x2: number;
   label?: string;
   star: boolean;
+  /** True when the arm connects to a nested bracket rather than a row. */
+  toBracket: boolean;
 }
 
 export interface BracketBox {
@@ -60,6 +65,8 @@ export interface BracketBox {
   y2: number;
   /** Label on the bar itself (coordinate brackets). */
   label?: string;
+  /** y for the bar label: the centre of the widest gap between arms, so it never sits on an arm's label. */
+  labelY: number;
   star: boolean;
   arms: ArmBox[];
 }
@@ -145,6 +152,7 @@ export function layoutDocument(
         x1: x,
         x2: child.kind === 'row' ? refX - cfg.refWidth + 2 : childX,
         star: child.star,
+        toBracket: child.kind === 'bracket',
       };
       if (child.label !== undefined) arm.label = child.label;
       return arm;
@@ -166,19 +174,36 @@ export function layoutDocument(
       x,
       y1,
       y2,
+      labelY: widestGapCentre(allArms.map((a) => a.y)),
       star: node.star,
       arms,
     };
     const barLabel = bracketLabel(node);
     if (barLabel !== undefined) box.label = barLabel;
     brackets.push(box);
-    return (y1 + y2) / 2;
+    // Biblearc attaches the parent's arm at this bracket's main point when one is marked,
+    // otherwise at the middle of the bar.
+    const starred = allArms.find((a) => a.star);
+    return starred ? starred.y : (y1 + y2) / 2;
   };
   doc.items.forEach((n) => place(n, 0));
 
   const width = tableX + doc.columns.length * cfg.columnWidth + cfg.padding;
   const height = y + cfg.padding;
   return { width, height, refX, tableX, tableY, columnXs, rows, brackets };
+}
+
+function widestGapCentre(ys: number[]): number {
+  let best = 0;
+  let centre = ys[0] ?? 0;
+  for (let i = 1; i < ys.length; i++) {
+    const gap = ys[i]! - ys[i - 1]!;
+    if (gap > best) {
+      best = gap;
+      centre = (ys[i]! + ys[i - 1]!) / 2;
+    }
+  }
+  return centre;
 }
 
 /** Coordinate brackets show their keyword on the bar; subordinate ones label their arms instead. */

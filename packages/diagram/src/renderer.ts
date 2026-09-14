@@ -53,7 +53,7 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
       if (!text) return;
       const fo = el(ownerDoc, 'foreignObject', { x: 0, y: 0, width: cellWidth, height: 10000 }) as SVGForeignObjectElement;
       const div = ownerDoc.createElementNS(XHTML_NS, 'div') as HTMLElement;
-      div.setAttribute('class', 'bracket-cell');
+      div.setAttribute('class', `bracket-cell bracket-col-${col} bracket-col-${cssToken(doc.columns[col] ?? '')}`);
       div.setAttribute('style', `width:${cellWidth}px`);
       div.textContent = text;
       fo.appendChild(div);
@@ -95,7 +95,7 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
       c.fo.setAttribute('height', String(Math.max(1, rowBox.height - 2 * cfg.cellPadding)));
       root.appendChild(c.fo); // move above the rects
     }
-    root.appendChild(text(ownerDoc, layout.refX, rowBox.y + 16, rowBox.ref, 'bracket-ref'));
+    root.appendChild(refText(ownerDoc, layout.refX, rowBox.y + 16, rowBox.ref, cfg.refWrapAt));
   }
 
   // 4. Brackets.
@@ -119,20 +119,42 @@ function drawBrackets(ownerDoc: Document, root: SVGElement, layout: Layout): voi
     g.appendChild(el(ownerDoc, 'path', { class: `bracket-bar bracket-${b.group}`, d: `M ${b.x} ${b.y1} V ${b.y2}` }));
     for (const arm of b.arms) {
       g.appendChild(el(ownerDoc, 'path', { class: `bracket-arm bracket-${b.group}`, d: `M ${arm.x1} ${arm.y} H ${arm.x2}` }));
-      const parts: string[] = [];
-      if (arm.star) parts.push(STAR);
-      if (arm.label) parts.push(arm.label);
-      if (parts.length) {
-        const t = text(ownerDoc, arm.x1 + 5, arm.y - 3, parts.join(' '), `bracket-label bracket-${b.group}`);
-        if (arm.star && !arm.label) t.setAttribute('class', 'bracket-star');
-        g.appendChild(t);
+      // Coordinate brackets carry their label on the bar, so push arm markers right to clear it.
+      let lx = arm.x1 + (b.coordinate ? 14 : 4);
+      if (arm.star) {
+        g.appendChild(text(ownerDoc, lx, arm.y - 3, STAR, 'bracket-star'));
+        lx += 10;
+      }
+      if (arm.label) {
+        g.appendChild(text(ownerDoc, lx, arm.y - 3, arm.label, `bracket-label bracket-${b.group}`));
       }
     }
     if (b.label) {
-      g.appendChild(text(ownerDoc, b.x + 5, (b.y1 + b.y2) / 2 + 4, b.label, `bracket-label bracket-${b.group}`));
+      g.appendChild(text(ownerDoc, b.x + 5, b.labelY + 4, b.label, `bracket-label bracket-${b.group}`));
     }
     root.appendChild(g);
   }
+}
+
+/** Verse reference; long ranges wrap after the hyphen ("21-" / "22a") as in Biblearc exports. */
+function refText(ownerDoc: Document, x: number, y: number, ref: string, wrapAt: number): SVGTextElement {
+  const t = el(ownerDoc, 'text', { x, y, class: 'bracket-ref' }) as SVGTextElement;
+  const m = ref.length > wrapAt ? /^([^-–]+[-–])(.+)$/.exec(ref) : null;
+  if (!m) {
+    t.textContent = ref;
+    return t;
+  }
+  const first = el(ownerDoc, 'tspan', { x, dy: 0 });
+  first.textContent = m[1]!;
+  const second = el(ownerDoc, 'tspan', { x, dy: '1.15em' });
+  second.textContent = m[2]!;
+  t.appendChild(first);
+  t.appendChild(second);
+  return t;
+}
+
+function cssToken(name: string): string {
+  return name.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'unnamed';
 }
 
 function findSvg(id: string): SVGSVGElement | null {

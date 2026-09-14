@@ -17,8 +17,10 @@ Requirements:
 ## Roadmap (agreed 2026-09-13)
 
 1. **Proof of concept — DONE 2026-09-13, verified by the user in Obsidian 1.13.7.** Registration on Obsidian's bundled Mermaid via `loadMermaid()` works, foreignObject row measurement works, ordinary Mermaid blocks are unaffected. Nested brackets, group colours, multiple columns, stars/labels and the `config` option line landed here too.
-2. **Full bracket features.** Arbitrary nesting, forests (multiple top-level items), per-child labels and stars, stacked labels, all 18 relationships with group colours (coordinate green, distinct statement red, restatement blue, contrary orange), inference/bilateral glyphs, verse-ref column with wrapping, multiple text columns with headers, title from frontmatter, stable CSS class names and CSS variables.
+2. **Full bracket features — largely done 2026-09-13; see "Phase 2 leftovers" below.** Arbitrary nesting, forests (multiple top-level items), per-child labels and stars, stacked labels, all 18 relationships with group colours (coordinate green, distinct statement red, restatement blue, contrary orange), inference/bilateral glyphs, verse-ref column with wrapping, multiple text columns with headers, title from frontmatter, stable CSS class names and CSS variables.
 3. **Text formatting.** Built-in inline subset (bold, italic, strike, `==highlight==`, `|` bar, `{blue brackets}`) behind a pluggable formatter interface; then an Obsidian-side formatter using `MarkdownRenderer`. Verify DOMPurify survival and internal-link click handling before relying on it. Embeds and callouts inside cells are out of scope.
+
+Phase 2 leftovers: a star on a top-level bracket is parsed but not drawn (nothing to attach it to); the parent-arm attachment point is an approximation of Biblearc's (starred arm, else midpoint) and may want a per-diagram option; the bilateral relationship renders generically with three children and no special glyph.
 
 Keep the parser and layout free of Obsidian imports throughout; only the plugin adapter and the phase-3 formatter may touch the Obsidian API.
 
@@ -52,6 +54,8 @@ Then open `test-vault/` in Obsidian and reload the plugin (or the app) after a r
 - `relationships.ts` holds the 18 relationships, their group (drives colour), and keyword/label aliases. `styles.ts` is the CSS Mermaid injects per diagram; colours are CSS custom properties.
 - `packages/obsidian-plugin/src/main.ts` is the whole adapter: `loadMermaid()` → `registerExternalDiagrams` → rerender open Markdown views.
 - Per-diagram options are `config <key> <value>` lines in the block body (`doc.options`), overriding `DEFAULT_LAYOUT` in `layout.ts`; `setBracketDefaults()` lets the host set vault-wide defaults. **Mermaid's frontmatter `config:` cannot carry them**: `sanitizeDirective` deletes every key absent from Mermaid's config schema, so a `bracket:` section is silently dropped. `coordinateArms` (`ends` default, `all` = Biblearc look) is the first option; the table is in `examples/Colossians_1_21-23.md`.
+- Layout rules distilled from the Biblearc PDFs (all in `layout.ts`): a parent's arm attaches to a child bracket at the child's starred arm if any, else the bar midpoint; a coordinate bar's label sits in the widest gap between its arms; leaf arms end just left of the ref column; refs longer than `refWrapAt` wrap after the hyphen.
+- Vault-wide defaults come from the plugin settings tab (`packages/obsidian-plugin/src/settings.ts`) via `setBracketDefaults()`; `config` lines in a block override them.
 - Mermaid's `%%` comment lines are stripped before our parser sees the text, so cell text cannot start a line with `%%`.
 
 ## What "bracketing" is
@@ -72,7 +76,7 @@ Coordinate relationships join 2+ equal siblings under one label. Subordinate rel
 - `Englishcongunctionsbracketingcheetsheetnewlogo.pdf` / `Greekconjunctions...pdf` — conjunction → relationship lookup tables (note "and" is ambiguous and can map to any relationship).
 - `Logicalrelationshipexamplesentencesnewlogo.pdf` — plain-English example sentence per relationship (birthday-party theme), useful for tests and docs.
 
-`examples/Colossians_1_21-23.md` — the proposed input syntax, worked for one pericope and for the whole-book outline, with the inline-formatting table. Keep it in sync with the parser.
+`examples/Colossians_1_21-23.md` — the input syntax, worked for one pericope and the whole-book outline, with the option and inline-formatting tables. `examples/Colossians_3_1-4.md` — richer fixture (five-deep nesting, stacked labels). `examples.test.ts` parses every block in these files, so they must stay valid.
 
 `examples/*.pdf` — target output. These are Biblearc jsPDF exports of Colossians brackets (one per pericope plus a whole-book outline in `Colossians.pdf`). They have **no text layer**; view them as images (the `Read` tool renders PDF pages). Conventions visible in them:
 - Layout: bracket tree on the left, verse references in a column, then one or more text columns (e.g. NA28 Greek + ESV, or a single "MINE" summary column) in a bordered table, one row per proposition.

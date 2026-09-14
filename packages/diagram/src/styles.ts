@@ -22,7 +22,7 @@ export function bracketStyles(): string {
   .bracket-ref { font-size: 12px; fill: var(--bracket-ref); text-anchor: end; }
   .bracket-bar, .bracket-arm { fill: none; stroke-width: 1.5; }
   .bracket-label { font-size: 11px; }
-  .bracket-star { font-size: 10px; fill: var(--bracket-star); }
+  .bracket-star { font-size: 9px; fill: var(--bracket-star); }
   .bracket-coordinate.bracket-bar, .bracket-coordinate.bracket-arm { stroke: var(--bracket-coordinate); }
   .bracket-distinct.bracket-bar, .bracket-distinct.bracket-arm { stroke: var(--bracket-distinct); }
   .bracket-restatement.bracket-bar, .bracket-restatement.bracket-arm { stroke: var(--bracket-restatement); }

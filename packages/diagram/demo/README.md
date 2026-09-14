@@ -1,4 +1,4 @@
-Browser demo of the diagram outside Obsidian. Build with
+Browser demo of the diagram outside Obsidian. Renders every block from examples/*.md. Build with
 
     npx esbuild packages/diagram/demo/main.ts --bundle --format=esm --outfile=<dir>/main.js
 

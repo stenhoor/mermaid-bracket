@@ -86,3 +86,45 @@ S
     expect(ends.brackets.find((b) => b.rel === 'G')!.arms).toHaveLength(2);
   });
 });
+
+describe('arm attachment', () => {
+  it('attaches a parent arm at the child bracket\'s starred arm when one exists', () => {
+    const d = parseBracket(`bracket
+G
+  * S
+    * 1
+    2
+    3
+  G 4
+`);
+    const l = layoutDocument(d, new Map());
+    const g = l.brackets.find((b) => b.rel === 'G')!;
+    const s = l.brackets.find((b) => b.rel === 'S')!;
+    const row1 = l.rows.find((r) => r.ref === '1')!;
+    expect(g.arms[0]!.y).toBe(row1.y + row1.height / 2);
+    expect(g.arms[0]!.y).not.toBe((s.y1 + s.y2) / 2);
+    expect(g.arms[0]!.toBracket).toBe(true);
+    expect(g.arms[1]!.toBracket).toBe(false);
+  });
+});
+
+describe('bar label placement', () => {
+  it('puts a coordinate label in the widest gap between arms', () => {
+    const d = parseBracket(`bracket
+S
+  1
+  2
+  3
+`);
+    const heights = new Map([
+      ['1', 10],
+      ['2', 10],
+      ['3', 200],
+    ]);
+    const l = layoutDocument(d, heights, { ...DEFAULT_LAYOUT, coordinateArms: 'all' });
+    const s = l.brackets[0]!;
+    const [a1, a2, a3] = s.arms.map((a) => a.y) as [number, number, number];
+    expect(a3 - a2).toBeGreaterThan(a2 - a1);
+    expect(s.labelY).toBe((a2 + a3) / 2);
+  });
+});

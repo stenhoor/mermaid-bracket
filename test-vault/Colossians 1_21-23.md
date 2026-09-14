@@ -110,6 +110,12 @@ P
 18: Paul's personal closing
 ```
 
+## Layout rules (from the Biblearc exports)
+
+- A parent's arm attaches to a nested bracket at that bracket's starred arm when one is marked, otherwise at the middle of its bar. Mark the main point with `*` to control where the parent connects.
+- A coordinate bracket's label sits in the widest gap between its arms.
+- Refs longer than 4 characters wrap after their hyphen (`21-` / `22a`).
+
 ## Inline formatting inside cells
 
 | Markup | Renders as | Seen in |
@@ -122,7 +128,7 @@ P
 
 ## Per-diagram options
 
-Options are `config <key> <value>` lines anywhere in the block body. (They cannot go in the Mermaid frontmatter `config:` block: Mermaid's sanitiser deletes keys it does not know.)
+Options are `config <key> <value>` lines anywhere in the block body. In Obsidian the plugin's settings tab sets vault-wide defaults for the same keys; a `config` line wins over the setting. (They cannot go in the Mermaid frontmatter `config:` block: Mermaid's sanitiser deletes keys it does not know.)
 
 ```mermaid
 ---

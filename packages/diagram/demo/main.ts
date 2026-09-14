@@ -1,12 +1,19 @@
 import mermaid from 'mermaid';
 import { bracketDiagram } from '@mermaid-bracket/diagram';
 
-const src = (document.getElementById('src') as HTMLTextAreaElement).value;
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
 await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
-try {
-  const { svg } = await mermaid.render('demo1', src);
-  document.getElementById('out')!.innerHTML = svg;
-} catch (e) {
-  document.getElementById('out')!.textContent = 'ERROR: ' + (e as Error).stack;
+
+const sources = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea.src'));
+let n = 0;
+for (const ta of sources) {
+  const out = document.createElement('div');
+  out.className = 'out';
+  ta.insertAdjacentElement('afterend', out);
+  try {
+    const { svg } = await mermaid.render(`demo${n++}`, ta.value);
+    out.innerHTML = svg;
+  } catch (e) {
+    out.textContent = 'ERROR: ' + (e as Error).stack;
+  }
 }
