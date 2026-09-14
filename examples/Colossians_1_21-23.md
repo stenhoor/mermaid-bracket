@@ -110,32 +110,26 @@ P
 18: Paul's personal closing
 ```
 
-## Layout rules (from the Biblearc exports)
-
-- A parent's arm attaches to a nested bracket at that bracket's starred arm when one is marked, otherwise at the middle of its bar. Mark the main point with `*` to control where the parent connects.
-- A coordinate bracket's label sits in the widest gap between its arms.
-- Refs longer than 4 characters wrap after their hyphen (`21-` / `22a`).
-
-## Inline formatting inside cells
-
-| Markup | Renders as | Seen in |
-|---|---|---|
-| `**bold**`, `*italic*`, `~~strike~~` | standard | `Colossians_3_12-17.pdf` (italic, strikethrough in 13b/13c) |
-| `==text==` | yellow highlight (Obsidian syntax) | `Colossians_3_12-17.pdf` (δὲ in v14) |
-| `\|` | red proposition-boundary bar | `Colossians_1_1-20.pdf` (v4, v11b-20) |
-| `{text}` | blue square brackets around text | `Colossians_2_16-23.pdf`, `Colossians_3_12-17.pdf` |
-| `•`, `[τὰ]` | literal | NA28 text |
-
 ## Per-diagram options
 
 Options are `config <key> <value>` lines anywhere in the block body. In Obsidian the plugin's settings tab sets vault-wide defaults for the same keys; a `config` line wins over the setting. (They cannot go in the Mermaid frontmatter `config:` block: Mermaid's sanitiser deletes keys it does not know.)
 
+| Key | Values | Default | Meaning |
+|---|---|---|---|
+| `coordinateArms` | `ends`, `all` | `ends` | `ends` draws only the first and last arm of S/P/A brackets (middle children that are brackets, or carry a star/label, keep theirs); `all` draws every arm, as Biblearc does |
+| `fontSize` | px | 13 | base size for cell text; refs, labels, title and row heights scale with it |
+| `useMaxWidth` | `true`, `false` | `false` | `false` renders at actual size (the pane scrolls sideways if narrower); `true` shrinks the whole diagram to fit the pane, Mermaid's usual behaviour, which makes two-column text small |
+| `columnWidth` | px | 420 | width of each text column |
+| `bracketStep` | px | 46 | horizontal distance between nested bracket bars |
+| `refWrapAt` | chars | 4 | refs longer than this wrap after their hyphen |
+
 ```mermaid
 ---
-title: Colossians 3:5–11 (Biblearc-style arms)
+title: Colossians 3:5–11 (Biblearc-style arms, larger type)
 ---
 bracket
 config coordinateArms all
+config fontSize 16
 config columnWidth 360
 columns ESV
 
@@ -155,9 +149,27 @@ G
 10: and have put on the new self.
 ```
 
-| Key | Values | Default | Meaning |
-|---|---|---|---|
-| `coordinateArms` | `ends`, `all` | `ends` | `ends` draws only the first and last arm of S/P/A brackets (middle children that are brackets, or carry a star/label, keep theirs); `all` draws every arm, as Biblearc does |
-| `columnWidth` | px | 420 | width of each text column |
-| `bracketStep` | px | 46 | horizontal distance between nested bracket bars |
-| `useMaxWidth` | `true`, `false` | `true` | scale to container width (Mermaid convention) |
+## Layout rules (from the Biblearc exports)
+
+- A parent's arm attaches to a nested bracket at that bracket's starred arm when one is marked, otherwise at the middle of its bar. Mark the main point with `*` to control where the parent connects.
+- A coordinate bracket's label sits in the widest gap between its arms.
+- Refs longer than 4 characters wrap after their hyphen (`21-` / `22a`).
+
+## Inline formatting inside cells
+
+The built-in formatter (default; identical in every Mermaid host):
+
+| Markup | Renders as | Seen in |
+|---|---|---|
+| `**bold**`, `*italic*` or `_italic_`, `~~strike~~`, `` `code` `` | standard | `Colossians_3_12-17.pdf` (italic, strikethrough in 13b/13c) |
+| `==text==` | yellow highlight (Obsidian syntax) | `Colossians_3_12-17.pdf` (δὲ in v14) |
+| `\|` | red proposition-boundary bar | `Colossians_1_1-20.pdf` (v4, v11b-20) |
+| `{text}` | blue square brackets around the text | `Colossians_2_16-23.pdf`, `Colossians_3_12-17.pdf` |
+| `\x` | literal `x` (escape `\|`, `\{`, `\*`, …) | |
+| `•`, `[τὰ]` | literal, no escaping needed | NA28 text |
+| `=={r}text==`, `**{b}text**` | Style Obmd colour keys (r o y g b p gray), in the "Built-in + Style Obmd colours" or Obsidian Markdown mode | |
+| `__{r}text__`, `__text__` | coloured / plain underline, "Built-in + Style Obmd colours" mode only (elsewhere `__text__` is bold) | |
+
+In Obsidian, the plugin setting "Cell text formatting" can switch to Obsidian's own Markdown renderer, which adds wiki-links, tags and other plugins' formatting on top of the same `|` and `{…}` marks. Links resolve relative to the active note.
+
+Cell text cannot start a line with `%%` (Mermaid strips such lines as comments).

@@ -59,3 +59,42 @@ G
     );
   });
 });
+
+describe('cell formatting through mermaid (strict security level)', () => {
+  it('keeps built-in inline formatting after DOMPurify', async () => {
+    const mermaid = (await import('mermaid')).default;
+    const { bracketDiagram } = await import('../src/index.js');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
+    const { svg } = await mermaid.render(
+      'fmt-test',
+      'bracket\n1: **bold** ==hi== one | two {three}\n',
+    );
+    expect(svg).toContain('<strong>bold</strong>');
+    expect(svg).toContain('<mark>hi</mark>');
+    expect(svg).toContain('class="bracket-bar"');
+    expect(svg).toContain('class="bracket-bkt-mark"');
+  });
+
+  it('keeps Obsidian-style internal-link markup from a host formatter after DOMPurify', async () => {
+    const mermaid = (await import('mermaid')).default;
+    const { bracketDiagram, setCellFormatter } = await import('../src/index.js');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
+    setCellFormatter({
+      format(text, ctx) {
+        const p = ctx.ownerDoc.createElement('p');
+        p.innerHTML = `<a data-href="Other note" href="Other note" class="internal-link" target="_blank" rel="noopener">${text}</a>`;
+        return p;
+      },
+    });
+    try {
+      const { svg } = await mermaid.render('fmt-host-test', 'bracket\n1: linked\n');
+      expect(svg).toContain('class="internal-link"');
+      expect(svg).toContain('data-href="Other note"');
+      expect(svg).toContain('href="Other note"');
+    } finally {
+      setCellFormatter(null);
+    }
+  });
+});

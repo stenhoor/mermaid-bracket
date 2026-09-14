@@ -4,6 +4,8 @@ import { injectUtils } from './mermaidUtils.js';
 import { parseBracket } from './parser.js';
 import { draw } from './renderer.js';
 export { setBracketDefaults } from './renderer.js';
+export { defaultFormatter, createInlineFormatter, formatInline, obmdKeyAt, setCellFormatter, getCellFormatter } from './formatter.js';
+export type { CellFormatter, FormatContext, InlineOptions } from './formatter.js';
 export type { BracketConfig } from './renderer.js';
 import { bracketStyles } from './styles.js';
 

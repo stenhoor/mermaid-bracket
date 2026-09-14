@@ -15,7 +15,9 @@ export interface LayoutConfig {
   titleHeight: number;
   /** Outer margin around the whole diagram. */
   padding: number;
-  /** Minimum row height. */
+  /** Base font size in px for cell text; refs, labels, title and row heights scale with it. */
+  fontSize: number;
+  /** Minimum row height; 0 means derive from fontSize. */
   minRowHeight: number;
   /** Refs longer than this many characters wrap at their hyphen onto two lines. */
   refWrapAt: number;
@@ -35,7 +37,8 @@ export const DEFAULT_LAYOUT: LayoutConfig = {
   headerHeight: 18,
   titleHeight: 30,
   padding: 8,
-  minRowHeight: 26,
+  fontSize: 13,
+  minRowHeight: 0,
   refWrapAt: 4,
   coordinateArms: 'ends',
 };
@@ -119,8 +122,9 @@ export function layoutDocument(
 ): Layout {
   const depth = maxDepth(doc.items);
   const hasHeader = doc.columns.some((c) => c !== '');
-  const headerHeight = hasHeader ? cfg.headerHeight : 0;
-  const titleHeight = doc.title ? cfg.titleHeight : 0;
+  const scale = cfg.fontSize / 13;
+  const headerHeight = hasHeader ? cfg.headerHeight * scale : 0;
+  const titleHeight = doc.title ? cfg.titleHeight * scale : 0;
 
   const treeWidth = depth * cfg.bracketStep;
   const refX = cfg.padding + treeWidth + cfg.refWidth;
@@ -133,7 +137,7 @@ export function layoutDocument(
   let y = tableY;
   for (const ref of leafOrder(doc.items)) {
     const text = textHeights.get(ref) ?? 0;
-    const height = Math.max(cfg.minRowHeight, text + 2 * cfg.cellPadding);
+    const height = Math.max(cfg.minRowHeight || cfg.fontSize * 2, text + 2 * cfg.cellPadding);
     rows.push({ ref, y, height });
     centerOf.set(ref, y + height / 2);
     y += height;

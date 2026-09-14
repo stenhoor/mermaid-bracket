@@ -9,3 +9,10 @@
 .bracket-cell {
   font-family: var(--font-text, inherit);
 }
+
+/* Actual-size diagrams wider than the pane scroll sideways instead of being clipped. */
+.markdown-rendered .mermaid:has(.bracket-diagram),
+.markdown-rendered .block-language-mermaid:has(.bracket-diagram) {
+  overflow-x: auto;
+  max-width: 100%;
+}

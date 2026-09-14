@@ -27,7 +27,7 @@ describe('layoutDocument', () => {
     expect(layout.rows[0]!.y).toBe(layout.tableY);
     expect(layout.rows[1]!.y).toBe(layout.rows[0]!.y + layout.rows[0]!.height);
     expect(layout.rows[1]!.height).toBe(40 + 2 * cfg.cellPadding);
-    expect(layout.rows[0]!.height).toBe(cfg.minRowHeight);
+    expect(layout.rows[0]!.height).toBe(cfg.fontSize * 2);
   });
 
   it('places nested bracket bars one step further right', () => {
@@ -126,5 +126,16 @@ S
     const [a1, a2, a3] = s.arms.map((a) => a.y) as [number, number, number];
     expect(a3 - a2).toBeGreaterThan(a2 - a1);
     expect(s.labelY).toBe((a2 + a3) / 2);
+  });
+});
+
+describe('fontSize', () => {
+  it('scales minimum row height, header and title with the font size', () => {
+    const d = parseBracket('bracket\ncolumns A\nS\n  1\n  2\n1: a\n2: b\n');
+    const small = layoutDocument({ ...d, title: 't' }, new Map(), { ...DEFAULT_LAYOUT, fontSize: 13 });
+    const big = layoutDocument({ ...d, title: 't' }, new Map(), { ...DEFAULT_LAYOUT, fontSize: 26 });
+    expect(big.rows[0]!.height).toBe(52);
+    expect(small.rows[0]!.height).toBe(26);
+    expect(big.tableY - DEFAULT_LAYOUT.padding).toBe(2 * (small.tableY - DEFAULT_LAYOUT.padding));
   });
 });

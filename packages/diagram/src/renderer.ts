@@ -2,6 +2,7 @@ import type { BracketDb } from './db.js';
 import { DEFAULT_LAYOUT, layoutDocument } from './layout.js';
 import type { Layout, LayoutConfig } from './layout.js';
 import type { BracketDocument } from './model.js';
+import { getCellFormatter } from './formatter.js';
 import { getConfig, log } from './mermaidUtils.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -24,7 +25,7 @@ export function setBracketDefaults(defaults: BracketConfig): void {
 }
 
 /** Mermaid DrawDefinition: render the parsed document into the SVG element Mermaid created. */
-export function draw(_text: string, id: string, _version: string, diagObj: { db: unknown }): void {
+export async function draw(_text: string, id: string, _version: string, diagObj: { db: unknown }): Promise<void> {
   const svg = findSvg(id);
   if (!svg) throw new Error(`bracket: svg #${id} not found`);
   const db = diagObj.db as BracketDb;
@@ -39,28 +40,31 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
   const cfg: LayoutConfig = { ...DEFAULT_LAYOUT, ...stripUndefined(userCfg) };
   const ownerDoc = svg.ownerDocument;
 
-  const root = el(ownerDoc, 'g', { class: 'bracket-diagram' });
+  const root = el(ownerDoc, 'g', { class: 'bracket-diagram', style: `--bracket-font-size:${cfg.fontSize}px` });
+  const fs = cfg.fontSize;
   svg.appendChild(root);
 
   // 1. Create cells and measure their text heights in the live DOM.
   const cellWidth = cfg.columnWidth - 2 * cfg.cellPadding;
   const cells = new Map<string, { fo: SVGForeignObjectElement; div: HTMLElement; col: number }[]>();
   const heights = new Map<string, number>();
+  const formatter = getCellFormatter();
   for (const row of doc.rows.values()) {
     const list: { fo: SVGForeignObjectElement; div: HTMLElement; col: number }[] = [];
     let tallest = 0;
-    row.cells.forEach((text, col) => {
-      if (!text) return;
+    for (let col = 0; col < row.cells.length; col++) {
+      const text = row.cells[col]!;
+      if (!text) continue;
       const fo = el(ownerDoc, 'foreignObject', { x: 0, y: 0, width: cellWidth, height: 10000 }) as SVGForeignObjectElement;
       const div = ownerDoc.createElementNS(XHTML_NS, 'div') as HTMLElement;
       div.setAttribute('class', `bracket-cell bracket-col-${col} bracket-col-${cssToken(doc.columns[col] ?? '')}`);
       div.setAttribute('style', `width:${cellWidth}px`);
-      div.textContent = text;
+      div.appendChild(await formatter.format(text, { ownerDoc, column: doc.columns[col] ?? '', ref: row.ref }));
       fo.appendChild(div);
       root.appendChild(fo);
       list.push({ fo, div, col });
       tallest = Math.max(tallest, measureHeight(div, text, cellWidth));
-    });
+    }
     cells.set(row.ref, list);
     heights.set(row.ref, tallest);
   }
@@ -70,7 +74,7 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
 
   // 3. Table: header, cell boxes, cells, refs.
   if (title) {
-    root.appendChild(text(ownerDoc, cfg.padding, cfg.padding + 18, title, 'bracket-title'));
+    root.appendChild(text(ownerDoc, cfg.padding, cfg.padding + fs + 5, title, 'bracket-title'));
   }
   const headerY = layout.tableY - 5;
   doc.columns.forEach((name, i) => {
@@ -95,15 +99,16 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
       c.fo.setAttribute('height', String(Math.max(1, rowBox.height - 2 * cfg.cellPadding)));
       root.appendChild(c.fo); // move above the rects
     }
-    root.appendChild(refText(ownerDoc, layout.refX, rowBox.y + 16, rowBox.ref, cfg.refWrapAt));
+    root.appendChild(refText(ownerDoc, layout.refX, rowBox.y + fs + 3, rowBox.ref, cfg.refWrapAt));
   }
 
   // 4. Brackets.
-  drawBrackets(ownerDoc, root, layout);
+  drawBrackets(ownerDoc, root, layout, fs);
 
   // 5. Size the svg.
   svg.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`);
-  if (userCfg.useMaxWidth ?? true) {
+  // Default is actual size: a text table scaled down to fit a narrow pane becomes unreadable.
+  if (userCfg.useMaxWidth ?? false) {
     svg.setAttribute('width', '100%');
     svg.setAttribute('style', `max-width: ${layout.width}px;`);
   } else {
@@ -113,7 +118,7 @@ export function draw(_text: string, id: string, _version: string, diagObj: { db:
   log.debug('bracket: rendered', { rows: layout.rows.length, brackets: layout.brackets.length });
 }
 
-function drawBrackets(ownerDoc: Document, root: SVGElement, layout: Layout): void {
+function drawBrackets(ownerDoc: Document, root: SVGElement, layout: Layout, fs: number): void {
   for (const b of layout.brackets) {
     const g = el(ownerDoc, 'g', { class: `bracket bracket-${b.group}` });
     g.appendChild(el(ownerDoc, 'path', { class: `bracket-bar bracket-${b.group}`, d: `M ${b.x} ${b.y1} V ${b.y2}` }));
@@ -123,7 +128,7 @@ function drawBrackets(ownerDoc: Document, root: SVGElement, layout: Layout): voi
       let lx = arm.x1 + (b.coordinate ? 14 : 4);
       if (arm.star) {
         g.appendChild(text(ownerDoc, lx, arm.y - 3, STAR, 'bracket-star'));
-        lx += 10;
+        lx += Math.round(fs * 0.8);
       }
       if (arm.label) {
         g.appendChild(text(ownerDoc, lx, arm.y - 3, arm.label, `bracket-label bracket-${b.group}`));
