@@ -1,0 +1,27 @@
+{
+  "name": "mermaid-bracket",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Biblearc-style bracketing diagrams as a custom Mermaid diagram type, with an Obsidian plugin",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspace packages/obsidian-plugin",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p packages/diagram --noEmit && tsc -p packages/obsidian-plugin --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.0.1",
+    "mermaid": "^11.13.0",
+    "obsidian": "^1.13.1",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.0"
+  }
+}

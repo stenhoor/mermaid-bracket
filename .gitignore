@@ -1,0 +1,6 @@
+node_modules/
+packages/obsidian-plugin/main.js
+test-vault/.obsidian/plugins/
+test-vault/.obsidian/workspace.json
+test-vault/.obsidian/workspace-mobile.json
+test-vault/.obsidian/cache/

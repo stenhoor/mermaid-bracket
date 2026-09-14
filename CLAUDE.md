@@ -1,0 +1,83 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project goal
+
+Build a **custom, reusable Mermaid diagram type** for Biblearc-style bracketing diagrams. Input is Mermaid-conformant text (a fenced code block with a new diagram keyword); output renders wherever Mermaid renders and reproduces the look of the diagrams in `examples/`.
+
+Requirements:
+1. Support all 18 logical relationships defined in `documents/`.
+2. Bracketing layouts with arbitrary multi-level nesting (a whole-book bracket nests pericope brackets).
+3. Text blocks per proposition, with Markdown-style inline formatting inside them.
+4. Multi-column text layouts so one row can show several translations side by side, including Greek/original-language text (Unicode, polytonic).
+
+**Initial target environment is Obsidian, as an Obsidian plugin, preferably extending an existing one.** No cloud or CDN rendering service; everything runs locally inside the vault. Obsidian bundles Mermaid (11.13 as of Obsidian 1.13.4) and exposes it to plugins via `loadMermaid()`; Mermaid's `registerExternalDiagrams` works on that instance. Design the parser/renderer so they are not tied to Obsidian; other rendering targets are planned for later phases.
+
+## Roadmap (agreed 2026-09-13)
+
+1. **Proof of concept — DONE 2026-09-13, verified by the user in Obsidian 1.13.7.** Registration on Obsidian's bundled Mermaid via `loadMermaid()` works, foreignObject row measurement works, ordinary Mermaid blocks are unaffected. Nested brackets, group colours, multiple columns, stars/labels and the `config` option line landed here too.
+2. **Full bracket features.** Arbitrary nesting, forests (multiple top-level items), per-child labels and stars, stacked labels, all 18 relationships with group colours (coordinate green, distinct statement red, restatement blue, contrary orange), inference/bilateral glyphs, verse-ref column with wrapping, multiple text columns with headers, title from frontmatter, stable CSS class names and CSS variables.
+3. **Text formatting.** Built-in inline subset (bold, italic, strike, `==highlight==`, `|` bar, `{blue brackets}`) behind a pluggable formatter interface; then an Obsidian-side formatter using `MarkdownRenderer`. Verify DOMPurify survival and internal-link click handling before relying on it. Embeds and callouts inside cells are out of scope.
+
+Keep the parser and layout free of Obsidian imports throughout; only the plugin adapter and the phase-3 formatter may touch the Obsidian API.
+
+## Decisions (2026-09-13)
+
+- **Layout:** npm workspaces, two packages. `packages/diagram` is the framework-free Mermaid external diagram (parser, layout, SVG); `packages/obsidian-plugin` is the thin adapter. Only the plugin package may import from `obsidian`.
+- **Keyword:** blocks start with `bracket` inside a normal ```mermaid fence.
+- **Plugin id:** `mermaid-bracket`, MIT licence.
+- **Test vault:** `test-vault/` in the repo; the plugin build copies `main.js`, `manifest.json`, `styles.css` into `test-vault/.obsidian/plugins/mermaid-bracket/`. Open it in Obsidian (installed locally, 1.13.x, bundled Mermaid 11.13). Never run the `obsidian` binary from a script: it launches the GUI and blocks.
+- **Toolchain:** Node 26, npm only (no pnpm/bun). TypeScript + esbuild for the plugin, vitest for parser/layout tests. Depend on `mermaid` for types only (`^11`, matching Obsidian's bundled major); nothing from Mermaid is bundled at runtime.
+
+## Commands
+
+```
+npm install                 # once; npm workspaces (packages/diagram, packages/obsidian-plugin)
+npm test                    # vitest: parser, layout, and a jsdom integration test through real Mermaid
+npx vitest run packages/diagram/test/parser.test.ts   # single test file
+npm run typecheck           # tsc --noEmit for both packages
+npm run build               # builds the plugin and copies it into test-vault/.obsidian/plugins/mermaid-bracket/
+npm run dev                 # esbuild watch mode, same copy step after each rebuild
+```
+
+`packages/diagram/demo/` renders the diagram outside Obsidian (see its README); bundle with esbuild, serve over HTTP, and `firefox --headless --screenshot` gives a quick visual check without launching Obsidian.
+
+Then open `test-vault/` in Obsidian and reload the plugin (or the app) after a rebuild. `test-vault/PoC.md` and `test-vault/Colossians 1_21-23.md` are the manual checks.
+
+## Architecture
+
+- `packages/diagram/src/index.ts` exports `bracketDiagram`, a Mermaid `ExternalDiagramDefinition` (`id`, `detector`, `loader`). Mermaid types are imported for type-checking only; nothing from Mermaid is bundled.
+- Pipeline per block: Mermaid strips frontmatter/comments and hands the title to `db.ts` → `parser.ts` builds a `BracketDocument` (columns, tree of `TreeNode`, rows keyed by verse ref; see `model.ts`) → `renderer.ts` creates foreignObject cells in the live SVG, measures their heights, calls `layout.ts` (pure geometry, unit-tested), then draws bars, arms, labels and stars.
+- `relationships.ts` holds the 18 relationships, their group (drives colour), and keyword/label aliases. `styles.ts` is the CSS Mermaid injects per diagram; colours are CSS custom properties.
+- `packages/obsidian-plugin/src/main.ts` is the whole adapter: `loadMermaid()` → `registerExternalDiagrams` → rerender open Markdown views.
+- Per-diagram options are `config <key> <value>` lines in the block body (`doc.options`), overriding `DEFAULT_LAYOUT` in `layout.ts`; `setBracketDefaults()` lets the host set vault-wide defaults. **Mermaid's frontmatter `config:` cannot carry them**: `sanitizeDirective` deletes every key absent from Mermaid's config schema, so a `bracket:` section is silently dropped. `coordinateArms` (`ends` default, `all` = Biblearc look) is the first option; the table is in `examples/Colossians_1_21-23.md`.
+- Mermaid's `%%` comment lines are stripped before our parser sees the text, so cell text cannot start a line with `%%`.
+
+## What "bracketing" is
+
+Bracketing is a Bible-study method (from Biblearc) that splits a passage into numbered propositions (e.g. `21-22a`, `22b`, `23a`) and joins them with nested brackets, each labelled with one of **18 logical relationships**. Relationships fall into four groups:
+
+- **Coordinate**: Series (S), Progression (P), Alternative (A)
+- **Support by Distinct Statement**: Ground (G), Inference (∴), Bilateral (BL), Action-Result (Ac/Res), Action-Purpose (Ac/Pur), Conditional (If/Th), Temporal (T), Locative (L)
+- **Support by Restatement**: Action-Manner (Ac/Mn), Comparison (Cf), Negative-Positive (-/+), Idea-Explanation (Id/Exp), Question-Answer (Q/A)
+- **Support by Contrary Statement**: Concessive (Csv), Situation-Response (Sit/R)
+
+Coordinate relationships join 2+ equal siblings under one label. Subordinate relationships pair exactly two halves, each with its own sub-label (e.g. `Ac` over `Pur`), and one half is the **main point**, marked with a star (★). BL is Ground + Inference combined around a middle proposition.
+
+## Reference material
+
+`documents/` — the authoritative definitions; consult these before inventing labels or abbreviations:
+- `The18LogicalRelationshipsEng.pdf` — definitions, abbreviations, conjunctions, and a Bible example for each relationship.
+- `Englishcongunctionsbracketingcheetsheetnewlogo.pdf` / `Greekconjunctions...pdf` — conjunction → relationship lookup tables (note "and" is ambiguous and can map to any relationship).
+- `Logicalrelationshipexamplesentencesnewlogo.pdf` — plain-English example sentence per relationship (birthday-party theme), useful for tests and docs.
+
+`examples/Colossians_1_21-23.md` — the proposed input syntax, worked for one pericope and for the whole-book outline, with the inline-formatting table. Keep it in sync with the parser.
+
+`examples/*.pdf` — target output. These are Biblearc jsPDF exports of Colossians brackets (one per pericope plus a whole-book outline in `Colossians.pdf`). They have **no text layer**; view them as images (the `Read` tool renders PDF pages). Conventions visible in them:
+- Layout: bracket tree on the left, verse references in a column, then one or more text columns (e.g. NA28 Greek + ESV, or a single "MINE" summary column) in a bordered table, one row per proposition.
+- Brackets are colour-coded by group: coordinate = green, distinct statement = red, restatement = blue. (Contrary-statement colour is not shown in the examples.)
+- Labels sit on the bracket's vertical bar (coordinate) or on each horizontal arm (subordinate); the star marks the main-point arm. Nesting is arbitrary depth; a whole-book bracket nests pericope brackets.
+- Verse refs use ranges and letter suffixes (`1-5`, `23b`); whole-book views drop the chapter number in the ref column.
+
+`pdftotext` works on `documents/*.pdf` (layout is two-column, so text interleaves); it returns nothing for `examples/*.pdf`.

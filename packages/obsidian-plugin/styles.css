@@ -1,0 +1,7 @@
+/* Mermaid Bracket: diagram colours are CSS variables set inside the SVG (see packages/diagram/src/styles.ts).
+   Override them from a CSS snippet, e.g.:
+   .mermaid .bracket-diagram { --bracket-coordinate: #3a7; }
+*/
+.bracket-cell {
+  font-family: var(--font-text, inherit);
+}
