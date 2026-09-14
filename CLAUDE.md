@@ -20,6 +20,8 @@ Requirements:
 2. **Full bracket features — largely done 2026-09-13; see "Phase 2 leftovers" below.** Arbitrary nesting, forests (multiple top-level items), per-child labels and stars, stacked labels, all 18 relationships with group colours (coordinate green, distinct statement red, restatement blue, contrary orange), inference/bilateral glyphs, verse-ref column with wrapping, multiple text columns with headers, title from frontmatter, stable CSS class names and CSS variables.
 3. **Text formatting — done 2026-09-13 (built-in and Obsidian formatters; link-click behaviour inside foreignObject awaits user confirmation).** Built-in inline subset (bold, italic, strike, `==highlight==`, `|` bar, `{blue brackets}`) behind a pluggable formatter interface; then an Obsidian-side formatter using `MarkdownRenderer`. Verify DOMPurify survival and internal-link click handling before relying on it. Embeds and callouts inside cells are out of scope.
 
+4. **Sentence diagramming — research done 2026-09-14, not started.** Target is the KoineWorks/Sowell Greek Reed–Kellogg system as implemented by Biblearc's Diagram module; the six `examples/SENTENCE_Colossians*.pdf` exports (they have a text layer) are the target output. Design input is `documents/sentence-diagramming-research.md` (§2b shape catalogue with Sowell's names, §5 syntax with two worked Colossians transcriptions, §6 layout sketch, §7 sub-phases 4a–4c). Planned as a second external diagram `sentence` registered by the same plugin, native SVG text (no foreignObject).
+
 Phase 2 leftovers: a star on a top-level bracket is parsed but not drawn (nothing to attach it to); the parent-arm attachment point is an approximation of Biblearc's (starred arm, else midpoint) and may want a per-diagram option; the bilateral relationship renders generically with three children and no special glyph.
 
 Keep the parser and layout free of Obsidian imports throughout; only the plugin adapter and the phase-3 formatter may touch the Obsidian API.
@@ -74,14 +76,18 @@ Coordinate relationships join 2+ equal siblings under one label. Subordinate rel
 
 ## Reference material
 
-`documents/` — the authoritative definitions; consult these before inventing labels or abbreviations:
+`documents/sentence-diagramming-research.md` — design doc for the planned `sentence` diagram (Reed–Kellogg).
+
+`documents/` — the authoritative definitions for bracketing; consult these before inventing labels or abbreviations:
 - `The18LogicalRelationshipsEng.pdf` — definitions, abbreviations, conjunctions, and a Bible example for each relationship.
 - `Englishcongunctionsbracketingcheetsheetnewlogo.pdf` / `Greekconjunctions...pdf` — conjunction → relationship lookup tables (note "and" is ambiguous and can map to any relationship).
 - `Logicalrelationshipexamplesentencesnewlogo.pdf` — plain-English example sentence per relationship (birthday-party theme), useful for tests and docs.
 
 `examples/Colossians_1_21-23.md` — the input syntax, worked for one pericope and the whole-book outline, with the option and inline-formatting tables. `examples/Colossians_3_1-4.md` — richer fixture (five-deep nesting, stacked labels). `examples.test.ts` parses every block in these files, so they must stay valid.
 
-`examples/*.pdf` — target output. These are Biblearc jsPDF exports of Colossians brackets (one per pericope plus a whole-book outline in `Colossians.pdf`). They have **no text layer**; view them as images (the `Read` tool renders PDF pages). Conventions visible in them:
+`examples/SENTENCE_Colossians*.pdf` — Biblearc Diagram (sentence diagram) exports, target for the planned `sentence` diagram; `pdftotext` works on these.
+
+`examples/Colossians*.pdf` — target output for `bracket`. These are Biblearc jsPDF exports of Colossians brackets (one per pericope plus a whole-book outline in `Colossians.pdf`). They have **no text layer**; view them as images (the `Read` tool renders PDF pages). Conventions visible in them:
 - Layout: bracket tree on the left, verse references in a column, then one or more text columns (e.g. NA28 Greek + ESV, or a single "MINE" summary column) in a bordered table, one row per proposition.
 - Brackets are colour-coded by group: coordinate = green, distinct statement = red, restatement = blue. (Contrary-statement colour is not shown in the examples.)
 - Labels sit on the bracket's vertical bar (coordinate) or on each horizontal arm (subordinate); the star marks the main-point arm. Nesting is arbitrary depth; a whole-book bracket nests pericope brackets.
