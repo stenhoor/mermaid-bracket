@@ -1,6 +1,7 @@
 import { loadMermaid, MarkdownView, Plugin } from 'obsidian';
 import { bracketDiagram, createInlineFormatter, setBracketDefaults, setCellFormatter } from '@mermaid-bracket/diagram';
 import { createObsidianFormatter } from './obsidian-formatter.js';
+import { registerExportMenu } from './export-menu.js';
 import { DEFAULT_SETTINGS, MermaidBracketSettingTab } from './settings.js';
 import type { MermaidBracketSettings } from './settings.js';
 
@@ -16,6 +17,7 @@ export default class MermaidBracketPlugin extends Plugin {
     this.applyFormatter();
     setBracketDefaults(this.settings);
     this.addSettingTab(new MermaidBracketSettingTab(this.app, this));
+    registerExportMenu(this);
 
     const mermaid = (await loadMermaid()) as MermaidWithExternal;
     await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
