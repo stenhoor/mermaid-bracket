@@ -1,5 +1,5 @@
 import { loadMermaid, MarkdownView, Plugin } from 'obsidian';
-import { bracketDiagram, createInlineFormatter, setBracketDefaults, setCellFormatter } from '@mermaid-bracket/diagram';
+import { bracketDiagram, createInlineFormatter, sentenceDiagram, setBracketDefaults, setCellFormatter, setSentenceDefaults } from '@mermaid-bracket/diagram';
 import { createObsidianFormatter } from './obsidian-formatter.js';
 import { registerExportMenu } from './export-menu.js';
 import { DEFAULT_SETTINGS, MermaidBracketSettingTab } from './settings.js';
@@ -15,12 +15,12 @@ export default class MermaidBracketPlugin extends Plugin {
   async onload(): Promise<void> {
     this.settings = { ...DEFAULT_SETTINGS, ...((await this.loadData()) as Partial<MermaidBracketSettings> | null) };
     this.applyFormatter();
-    setBracketDefaults(this.settings);
+    this.applyDefaults();
     this.addSettingTab(new MermaidBracketSettingTab(this.app, this));
     registerExportMenu(this);
 
     const mermaid = (await loadMermaid()) as MermaidWithExternal;
-    await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
+    await mermaid.registerExternalDiagrams([bracketDiagram, sentenceDiagram], { lazyLoad: false });
     // Blocks rendered before registration show a Mermaid "unknown diagram" error; redraw open notes.
     this.app.workspace.onLayoutReady(() => this.rerenderOpenViews());
   }
@@ -28,8 +28,14 @@ export default class MermaidBracketPlugin extends Plugin {
   async applySettings(): Promise<void> {
     await this.saveData(this.settings);
     this.applyFormatter();
-    setBracketDefaults(this.settings);
+    this.applyDefaults();
     this.rerenderOpenViews();
+  }
+
+  private applyDefaults(): void {
+    setBracketDefaults(this.settings);
+    // The sentence diagram shares the font size and width behaviour; its geometry has its own defaults.
+    setSentenceDefaults({ fontSize: this.settings.fontSize, useMaxWidth: this.settings.useMaxWidth });
   }
 
   onunload(): void {

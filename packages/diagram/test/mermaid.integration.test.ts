@@ -98,3 +98,35 @@ describe('cell formatting through mermaid (strict security level)', () => {
     }
   });
 });
+
+describe('sentence diagram through mermaid', () => {
+  it('registers alongside bracket, detects and renders native-text svg', async () => {
+    const mermaid = (await import('mermaid')).default;
+    const { bracketDiagram, sentenceDiagram } = await import('../src/index.js');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    await mermaid.registerExternalDiagrams([bracketDiagram, sentenceDiagram], { lazyLoad: false });
+    const src = `---
+title: Diagram of Colossians 1:2
+---
+sentence
+verse 1:2
+subj χάρις
+subj + καὶ εἰρήνη
+verb
+  mod ὑμῖν
+  prep ἀπὸ θεοῦ
+    gen πατρὸς
+    gen ἡμῶν
+`;
+    expect(await mermaid.detectType(src)).toBe('sentence');
+    expect(await mermaid.detectType('bracket\nS\n  1\n  2\n1: a\n2: b')).toBe('bracket');
+    const { svg } = await mermaid.render('sentence-test', src);
+    expect(svg).toContain('sentence-diagram');
+    expect(svg).not.toContain('foreignObject');
+    expect(svg).toContain('Diagram of Colossians 1:2');
+    expect(svg).toContain('>χάρις<');
+    expect(svg).toContain('>/ πατρὸς<');
+    expect(svg).toContain('class="sd-verse"');
+    expect(svg).toContain('class="sd-dotted"');
+  });
+});

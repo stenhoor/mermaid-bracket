@@ -1,8 +1,8 @@
 import mermaid from 'mermaid';
-import { bracketDiagram, createInlineFormatter, setCellFormatter } from '@mermaid-bracket/diagram';
+import { bracketDiagram, sentenceDiagram, createInlineFormatter, setCellFormatter } from '@mermaid-bracket/diagram';
 
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
-await mermaid.registerExternalDiagrams([bracketDiagram], { lazyLoad: false });
+await mermaid.registerExternalDiagrams([bracketDiagram, sentenceDiagram], { lazyLoad: false });
 
 // <textarea class="src" data-formatter="obmd"> renders with Style Obmd colour keys enabled.
 const sources = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea.src'));

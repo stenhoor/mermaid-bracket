@@ -41,3 +41,6 @@ export type { Layout, LayoutConfig, BracketBox, ArmBox, RowBox } from './layout.
 export { RELATIONSHIPS, lookupRelationship } from './relationships.js';
 export type { BracketDocument, TreeNode, BracketNode, LeafNode, Row, RelationshipGroup } from './model.js';
 export { BracketParseError } from './model.js';
+
+// Second diagram type: sentence diagrams (KoineWorks / Biblearc Greek Reed–Kellogg).
+export * from './sentence/index.js';

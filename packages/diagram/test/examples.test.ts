@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { layoutDocument, parseBracket } from '../src/index.js';
+import { layoutDocument, layoutSentence, parseBracket, parseSentence } from '../src/index.js';
 
 const dir = path.resolve(__dirname, '../../../examples');
 const files = readdirSync(dir).filter((f) => f.endsWith('.md'));
@@ -14,9 +14,15 @@ describe('examples/*.md', () => {
       expect(blocks.length).toBeGreaterThan(0);
       for (const block of blocks) {
         const body = block.replace(/^---\n[\s\S]*?\n---\n/, '');
-        const doc = parseBracket(body);
-        const layout = layoutDocument(doc, new Map());
-        expect(layout.rows.length).toBe(doc.rows.size);
+        if (/^\s*sentence\b/.test(body)) {
+          const doc = parseSentence(body);
+          const layout = layoutSentence(doc, (t) => t.length * 8);
+          expect(layout.prims.length).toBeGreaterThan(0);
+        } else {
+          const doc = parseBracket(body);
+          const layout = layoutDocument(doc, new Map());
+          expect(layout.rows.length).toBe(doc.rows.size);
+        }
       }
     });
   }
