@@ -60,6 +60,14 @@ Syntax reference and worked examples: `examples/Colossians_1_21-23.md` (bracket)
    `<vault>/.obsidian/plugins/mermaid-bracket/`
 3. Enable **Mermaid Bracket** under Settings → Community plugins, then reload Obsidian.
 
+## Releasing
+
+Releases are cut by tag. In `packages/obsidian-plugin`, run `npm version 0.2.0` (bumps `package.json`,
+`manifest.json` and `versions.json` together), then `git push && git push --tags`. The
+`Release Obsidian plugin` workflow checks the tag against `manifest.json`, runs the tests, builds, and attaches
+`main.js`, `manifest.json` and `styles.css` to a GitHub release, which is what
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) and the community plugin list install from.
+
 ## Development
 
 ```
