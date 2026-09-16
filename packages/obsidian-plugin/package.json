@@ -1,6 +1,6 @@
 {
   "name": "mermaid-bracket",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Bracketing diagrams (Biblearc style) inside Mermaid code blocks in Obsidian",
   "license": "MIT",
   "type": "module",

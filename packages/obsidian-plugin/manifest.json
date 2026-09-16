@@ -1,9 +1,9 @@
 {
-  "id": "mermaid-bracket",
-  "name": "Mermaid Bracket",
-  "version": "0.1.0",
-  "minAppVersion": "1.5.0",
-  "description": "Render Biblearc-style bracketing diagrams (the 18 logical relationships) from a `bracket` block inside Mermaid code fences.",
-  "author": "Steve TenHoor",
-  "isDesktopOnly": false
+	"id": "mermaid-bracket",
+	"name": "Mermaid Bracket",
+	"version": "0.1.1",
+	"minAppVersion": "1.5.0",
+	"description": "Render Biblearc-style bracketing diagrams (the 18 logical relationships) from a `bracket` block inside Mermaid code fences.",
+	"author": "Steve TenHoor",
+	"isDesktopOnly": false
 }
