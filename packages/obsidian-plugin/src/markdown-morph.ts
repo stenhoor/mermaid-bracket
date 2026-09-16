@@ -5,14 +5,14 @@
  * `bakeMorphTags` does the same to the note's source text, so the formatting survives export or
  * uninstalling the plugin. Neither imports from `obsidian`, so both are unit-testable.
  */
-import { morphClasses, morphLabel, tokenizeMorph } from '@mermaid-bracket/diagram';
+import { morphAttributes, tokenizeMorph } from '@mermaid-bracket/diagram';
 import type { Morph } from '@mermaid-bracket/diagram';
 
 /** Elements whose text must be left alone: code, existing diagrams, already-tagged spans. */
 const SKIP_SELECTOR = 'code, pre, svg, .bracket-cell, .gk, .internal-link, .cm-inline-code';
 
-export function spanAttributes(m: Morph): { class: string; 'data-morph': string; title: string } {
-  return { class: morphClasses(m).join(' '), 'data-morph': m.code, title: morphLabel(m) };
+export function spanAttributes(m: Morph, word: string): Record<string, string> {
+  return morphAttributes(word, m);
 }
 
 /** Wrap every tagged token inside `el` in a span. Returns how many tags were applied. */
@@ -43,7 +43,7 @@ export function tagMorphInElement(el: HTMLElement): number {
         continue;
       }
       const span = doc.createElement('span');
-      for (const [k, v] of Object.entries(spanAttributes(seg.morph))) span.setAttribute(k, v);
+      for (const [k, v] of Object.entries(spanAttributes(seg.morph, seg.text))) span.setAttribute(k, v);
       span.textContent = seg.text;
       frag.appendChild(span);
       applied++;
@@ -56,51 +56,52 @@ export function tagMorphInElement(el: HTMLElement): number {
 const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})/;
 
 /**
+ * Apply `fn` to every stretch of Markdown that is not a fenced code block or inline code, leaving
+ * those untouched. Shared by the bake command and by automatic tagging.
+ */
+export function mapOutsideCode(markdown: string, fn: (text: string) => string): string {
+  let fence: string | null = null;
+  return markdown
+    .split('\n')
+    .map((line) => {
+      const m = FENCE_RE.exec(line);
+      if (fence) {
+        if (m && line.trim().startsWith(fence)) fence = null;
+        return line;
+      }
+      if (m) {
+        fence = m[1]!.slice(0, 3);
+        return line;
+      }
+      return line
+        .split(/(`+[^`]*`+)/g)
+        .map((part, i) => (i % 2 === 1 ? part : fn(part)))
+        .join('');
+    })
+    .join('\n');
+}
+
+/**
  * Rewrite tags in Markdown source as HTML spans, skipping fenced code blocks and inline code.
  * Returns the new text and the number of tags converted.
  */
 export function bakeMorphTags(markdown: string): { text: string; count: number } {
   let count = 0;
-  let fence: string | null = null;
-  const lines = markdown.split('\n').map((line) => {
-    const m = FENCE_RE.exec(line);
-    if (fence) {
-      if (m && line.trim().startsWith(fence)) fence = null;
-      return line;
-    }
-    if (m) {
-      fence = m[1]!.slice(0, 3);
-      return line;
-    }
-    const out = bakeLine(line);
-    count += out.count;
-    return out.text;
+  const text = mapOutsideCode(markdown, (part) => {
+    if (!part.includes('^')) return part;
+    const segments = tokenizeMorph(part);
+    if (!segments.some((s) => s.morph)) return part;
+    return segments
+      .map((seg) => {
+        if (!seg.morph) return seg.text;
+        count++;
+        const attrs = Object.entries(spanAttributes(seg.morph, seg.text))
+          .map(([k, v]) => `${k}="${escapeAttr(v)}"`)
+          .join(' ');
+        return `<span ${attrs}>${escapeText(seg.text)}</span>`;
+      })
+      .join('');
   });
-  return { text: lines.join('\n'), count };
-}
-
-/** One line, leaving inline code spans untouched. */
-function bakeLine(line: string): { text: string; count: number } {
-  if (!line.includes('^')) return { text: line, count: 0 };
-  let count = 0;
-  const parts = line.split(/(`+[^`]*`+)/g); // odd indices are inline code
-  const text = parts
-    .map((part, i) => {
-      if (i % 2 === 1) return part;
-      const segments = tokenizeMorph(part);
-      if (!segments.some((s) => s.morph)) return part;
-      return segments
-        .map((seg) => {
-          if (!seg.morph) return seg.text;
-          count++;
-          const attrs = Object.entries(spanAttributes(seg.morph))
-            .map(([k, v]) => `${k}="${escapeAttr(v)}"`)
-            .join(' ');
-          return `<span ${attrs}>${escapeText(seg.text)}</span>`;
-        })
-        .join('');
-    })
-    .join('');
   return { text, count };
 }
 

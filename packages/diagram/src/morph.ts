@@ -231,3 +231,50 @@ export function stripMorph(text: string): string {
 export function hasMorph(text: string): boolean {
   return tokenizeMorph(text).some((s) => s.morph);
 }
+
+/* ---------------------------------------------------------------------------------------------
+ * Optional lexicon hook. The diagram package ships no word list; a host (the Obsidian plugin)
+ * installs a provider so tagged words can also show their lemma and gloss.
+ * ------------------------------------------------------------------------------------------- */
+
+export interface MorphInfo {
+  lemma?: string;
+  gloss?: string;
+}
+
+export type MorphInfoProvider = (word: string) => MorphInfo | null;
+
+let infoProvider: MorphInfoProvider | null = null;
+
+export function setMorphInfoProvider(provider: MorphInfoProvider | null): void {
+  infoProvider = provider;
+}
+
+export function morphInfo(word: string): MorphInfo | null {
+  if (!infoProvider) return null;
+  try {
+    return infoProvider(word);
+  } catch {
+    return null;
+  }
+}
+
+/** Tooltip for a tagged word: "λόγος — word, speech · noun · nominative · singular · masculine". */
+export function morphTitle(word: string, m: Morph): string {
+  const info = morphInfo(word);
+  const head = [info?.lemma, info?.gloss].filter(Boolean).join(' — ');
+  return head ? `${head} · ${morphLabel(m)}` : morphLabel(m);
+}
+
+/** The attributes every tagged word carries, in every renderer. */
+export function morphAttributes(word: string, m: Morph): Record<string, string> {
+  const info = morphInfo(word);
+  const attrs: Record<string, string> = {
+    class: morphClasses(m).join(' '),
+    'data-morph': m.code,
+    title: morphTitle(word, m),
+  };
+  if (info?.lemma) attrs['data-lemma'] = info.lemma;
+  if (info?.gloss) attrs['data-gloss'] = info.gloss;
+  return attrs;
+}

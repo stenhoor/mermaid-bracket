@@ -14,7 +14,7 @@ export interface CellFormatter {
   format(text: string, ctx: FormatContext): Node | Promise<Node>;
 }
 
-import { lastTokenStart, morphClasses, morphLabel, MORPH_CODE_RE, parseMorph } from './morph.js';
+import { lastTokenStart, morphAttributes, MORPH_CODE_RE, parseMorph } from './morph.js';
 
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
 
@@ -145,9 +145,8 @@ export function formatInline(text: string, ownerDoc: Document, opts: InlineOptio
         const token = buf.slice(start);
         buf = buf.slice(0, start);
         flush();
-        const span = mk('span', morphClasses(morph).join(' '));
-        span.setAttribute('data-morph', morph.code);
-        span.setAttribute('title', morphLabel(morph));
+        const span = mk('span');
+        for (const [k, v] of Object.entries(morphAttributes(token, morph))) span.setAttribute(k, v);
         span.textContent = token;
         container.appendChild(span);
         i += m![0].length;

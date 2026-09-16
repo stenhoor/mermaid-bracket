@@ -42,7 +42,10 @@ export { RELATIONSHIPS, lookupRelationship } from './relationships.js';
 export type { BracketDocument, TreeNode, BracketNode, LeafNode, Row, RelationshipGroup } from './model.js';
 export { BracketParseError } from './model.js';
 export { MORPH_POS, MORPH_SLOTS, MORPH_CODE_RE, parseMorph, morphClasses, morphLabel, tokenizeMorph, stripMorph, hasMorph, lastTokenStart } from './morph.js';
-export type { Morph, MorphSegment, MorphSlotName, CodeEntry } from './morph.js';
+export { morphAttributes, morphTitle, morphInfo, setMorphInfoProvider } from './morph.js';
+export type { Morph, MorphSegment, MorphSlotName, CodeEntry, MorphInfo, MorphInfoProvider } from './morph.js';
+export { decodeGreekIndex, lookupForm, lookupWord, agreedCode, foldGreek, GREEK_WORD_RE } from './morph-lookup.js';
+export type { GreekIndex, FormInfo, WordInfo, AgreedCode } from './morph-lookup.js';
 
 // Second diagram type: sentence diagrams (KoineWorks / Biblearc Greek Reed–Kellogg).
 export * from './sentence/index.js';

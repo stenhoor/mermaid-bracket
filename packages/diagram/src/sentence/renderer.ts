@@ -1,4 +1,4 @@
-import { morphClasses, morphLabel } from '../morph.js';
+import { morphAttributes, morphTitle } from '../morph.js';
 import { getConfig, log } from '../mermaidUtils.js';
 import type { SentenceDb } from './db.js';
 import { DEFAULT_SENTENCE, layoutSentence } from './layout.js';
@@ -83,10 +83,11 @@ function prim(ownerDoc: Document, p: Prim): SVGElement {
       const span = el(ownerDoc, 'tspan', {});
       span.setAttribute('xml:space', 'preserve');
       if (seg.morph) {
-        span.setAttribute('class', morphClasses(seg.morph).join(' '));
-        span.setAttribute('data-morph', seg.morph.code);
+        for (const [k, v] of Object.entries(morphAttributes(seg.text, seg.morph))) {
+          if (k !== 'title') span.setAttribute(k, v);
+        }
         const title = el(ownerDoc, 'title', {});
-        title.textContent = morphLabel(seg.morph);
+        title.textContent = morphTitle(seg.text, seg.morph);
         span.appendChild(title);
       }
       span.appendChild(ownerDoc.createTextNode(seg.text));

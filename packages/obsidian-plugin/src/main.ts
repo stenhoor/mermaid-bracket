@@ -1,9 +1,10 @@
 import { loadMermaid, MarkdownView, Notice, Plugin } from 'obsidian';
 import type { Editor } from 'obsidian';
-import { bracketDiagram, createInlineFormatter, sentenceDiagram, setBracketDefaults, setCellFormatter, setSentenceDefaults } from '@mermaid-bracket/diagram';
+import { bracketDiagram, createInlineFormatter, sentenceDiagram, setBracketDefaults, setCellFormatter, setMorphInfoProvider, setSentenceDefaults } from '@mermaid-bracket/diagram';
 import { createObsidianFormatter } from './obsidian-formatter.js';
 import { registerExportMenu } from './export-menu.js';
 import { bakeMorphTags, tagMorphInElement } from './markdown-morph.js';
+import { autoTagGreek, buildGlossary, greekIndex, renderGlossary, wordInfo } from './greek.js';
 import { DEFAULT_SETTINGS, MermaidBracketSettingTab } from './settings.js';
 import type { MermaidBracketSettings } from './settings.js';
 
@@ -17,6 +18,7 @@ export default class MermaidBracketPlugin extends Plugin {
   async onload(): Promise<void> {
     this.settings = { ...DEFAULT_SETTINGS, ...((await this.loadData()) as Partial<MermaidBracketSettings> | null) };
     this.applyFormatter();
+    this.applyGreekProvider();
     this.applyDefaults();
     this.addSettingTab(new MermaidBracketSettingTab(this.app, this));
     registerExportMenu(this);
@@ -24,6 +26,59 @@ export default class MermaidBracketPlugin extends Plugin {
     // Morphology tags in ordinary note text (reading view).
     this.registerMarkdownPostProcessor((el) => {
       if (this.settings.tagMarkdownNotes) tagMorphInElement(el);
+    });
+
+    this.addCommand({
+      id: 'auto-tag-greek',
+      name: 'Tag Greek morphology automatically',
+      checkCallback: (checking: boolean) => {
+        if (!this.settings.greekLookup) return false;
+        if (checking) return true;
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        const editor = view.editor;
+        const selection = editor.getSelection();
+        const { text, tagged, partial, skipped } = autoTagGreek(selection || editor.getValue(), greekIndex());
+        if (tagged + partial === 0) {
+          new Notice('No untagged Greek words could be matched');
+          return true;
+        }
+        if (selection) editor.replaceSelection(text);
+        else editor.setValue(text);
+        const left = [...skipped.values()].reduce((a, b) => a + b, 0);
+        new Notice(
+          `Tagged ${tagged} word${tagged === 1 ? '' : 's'}` +
+            (partial ? `, ${partial} partially` : '') +
+            (left ? `; ${left} ambiguous left untagged` : ''),
+        );
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'greek-glossary',
+      name: 'Create Greek glossary',
+      checkCallback: (checking: boolean) => {
+        if (!this.settings.greekLookup || !this.settings.greekGlossary) return false;
+        if (checking) return true;
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        const editor = view.editor;
+        const rows = buildGlossary(editor.getSelection() || editor.getValue(), greekIndex());
+        if (rows.length === 0) {
+          new Notice('No Greek words found');
+          return true;
+        }
+        const table = renderGlossary(rows, {
+          style: this.settings.glossaryStyle,
+          includeCounts: this.settings.glossaryCounts,
+          includeForms: this.settings.glossaryForms,
+        });
+        const cursor = editor.getCursor('to');
+        editor.replaceRange(`\n\n${table}\n`, { line: cursor.line, ch: editor.getLine(cursor.line).length });
+        new Notice(`Glossary: ${rows.length} lemma${rows.length === 1 ? '' : 's'}`);
+        return true;
+      },
     });
 
     this.addCommand({
@@ -52,8 +107,15 @@ export default class MermaidBracketPlugin extends Plugin {
   async applySettings(): Promise<void> {
     await this.saveData(this.settings);
     this.applyFormatter();
+    this.applyGreekProvider();
     this.applyDefaults();
     this.rerenderOpenViews();
+  }
+
+  /** The hover lexicon is only consulted when both toggles are on. */
+  private applyGreekProvider(): void {
+    const on = this.settings.greekLookup && this.settings.greekHoverGloss;
+    setMorphInfoProvider(on ? (word) => wordInfo(word) : null);
   }
 
   private applyDefaults(): void {
@@ -64,6 +126,7 @@ export default class MermaidBracketPlugin extends Plugin {
 
   onunload(): void {
     setCellFormatter(null);
+    setMorphInfoProvider(null);
   }
 
   private applyFormatter(): void {

@@ -53,6 +53,22 @@ verb  ἦν^V-3IAI-S--
   prep  πρὸς^P- τὸν^RA----ASM- θεόν^N-----ASM-
 ```
 
+## Letting the plugin do the tagging
+
+The tags above were typed by hand. Paste untagged Greek and run **Tag Greek morphology automatically**
+from the command palette:
+
+Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.
+
+Words the corpus parses one way only are tagged outright. Where the parses disagree, only the shared
+features are written: πάντα becomes an adjective with no case, and καί is left untouched, because it may
+be a conjunction or an adverb. Hover a tagged word to see its lemma and gloss.
+
+## Vocabulary of a passage
+
+Run **Create Greek glossary** with the passage selected to append a table like this one. Layout and
+columns are set under Settings → Mermaid Bracket → Greek lookup.
+
 ## Making it permanent
 
 Run **Convert Greek morphology tags to HTML** from the command palette to replace the tags in this

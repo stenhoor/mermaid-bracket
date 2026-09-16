@@ -7,6 +7,15 @@ export interface MermaidBracketSettings {
   cellFormatter: 'builtin' | 'obmd' | 'obsidian';
   /** Apply Greek morphology tags in ordinary note text, not only inside diagrams. */
   tagMarkdownNotes: boolean;
+  /** Use the bundled MorphGNT index: automatic tagging, hover glosses, glossaries. */
+  greekLookup: boolean;
+  /** Show the lemma and gloss in the hover tooltip of a tagged word. */
+  greekHoverGloss: boolean;
+  /** Offer the glossary command. */
+  greekGlossary: boolean;
+  glossaryStyle: 'table' | 'list';
+  glossaryCounts: boolean;
+  glossaryForms: boolean;
   coordinateArms: 'ends' | 'all';
   columnWidth: number;
   bracketStep: number;
@@ -17,6 +26,12 @@ export interface MermaidBracketSettings {
 export const DEFAULT_SETTINGS: MermaidBracketSettings = {
   cellFormatter: 'builtin',
   tagMarkdownNotes: true,
+  greekLookup: true,
+  greekHoverGloss: true,
+  greekGlossary: true,
+  glossaryStyle: 'table',
+  glossaryCounts: true,
+  glossaryForms: false,
   coordinateArms: 'ends',
   columnWidth: 420,
   bracketStep: 46,
@@ -58,6 +73,70 @@ export class MermaidBracketSettingTab extends PluginSettingTab {
           await this.plugin.applySettings();
         }),
       );
+
+    new Setting(containerEl).setName('Greek lookup').setHeading();
+
+    new Setting(containerEl)
+      .setName('Use the bundled MorphGNT index')
+      .setDesc('Enables automatic tagging, hover glosses and glossaries. Turn off to rely only on tags you write yourself.')
+      .addToggle((t) =>
+        t.setValue(this.plugin.settings.greekLookup).onChange(async (v) => {
+          this.plugin.settings.greekLookup = v;
+          await this.plugin.applySettings();
+          this.display();
+        }),
+      );
+
+    if (this.plugin.settings.greekLookup) {
+      new Setting(containerEl)
+        .setName('Lemma and gloss on hover')
+        .setDesc('Add the dictionary form and a short definition to a tagged word\'s tooltip, and as data-lemma and data-gloss attributes.')
+        .addToggle((t) =>
+          t.setValue(this.plugin.settings.greekHoverGloss).onChange(async (v) => {
+            this.plugin.settings.greekHoverGloss = v;
+            await this.plugin.applySettings();
+          }),
+        );
+
+      new Setting(containerEl)
+        .setName('Glossary command')
+        .setDesc('Offer "Create Greek glossary" in the command palette, which lists the vocabulary of a note or selection.')
+        .addToggle((t) =>
+          t.setValue(this.plugin.settings.greekGlossary).onChange(async (v) => {
+            this.plugin.settings.greekGlossary = v;
+            await this.plugin.applySettings();
+            this.display();
+          }),
+        );
+
+      if (this.plugin.settings.greekGlossary) {
+        new Setting(containerEl)
+          .setName('Glossary layout')
+          .addDropdown((d) =>
+            d
+              .addOptions({ table: 'Table', list: 'Bullet list' })
+              .setValue(this.plugin.settings.glossaryStyle)
+              .onChange(async (v) => {
+                this.plugin.settings.glossaryStyle = v === 'list' ? 'list' : 'table';
+                await this.plugin.applySettings();
+              }),
+          )
+          .addToggle((t) =>
+            t.setTooltip('Include occurrence counts').setValue(this.plugin.settings.glossaryCounts).onChange(async (v) => {
+              this.plugin.settings.glossaryCounts = v;
+              await this.plugin.applySettings();
+            }),
+          )
+          .addToggle((t) =>
+            t.setTooltip('Include the inflected forms found').setValue(this.plugin.settings.glossaryForms).onChange(async (v) => {
+              this.plugin.settings.glossaryForms = v;
+              await this.plugin.applySettings();
+            }),
+          );
+      }
+    }
+
+    new Setting(containerEl).setName('Diagrams').setHeading();
 
     new Setting(containerEl)
       .setName('Arms on coordinate brackets')
