@@ -5,6 +5,8 @@ import type MermaidBracketPlugin from './main.js';
 export interface MermaidBracketSettings {
   /** `builtin`: the diagram's own inline subset (portable). `obsidian`: Obsidian's Markdown renderer (wiki-links etc.). */
   cellFormatter: 'builtin' | 'obmd' | 'obsidian';
+  /** Apply Greek morphology tags in ordinary note text, not only inside diagrams. */
+  tagMarkdownNotes: boolean;
   coordinateArms: 'ends' | 'all';
   columnWidth: number;
   bracketStep: number;
@@ -14,6 +16,7 @@ export interface MermaidBracketSettings {
 
 export const DEFAULT_SETTINGS: MermaidBracketSettings = {
   cellFormatter: 'builtin',
+  tagMarkdownNotes: true,
   coordinateArms: 'ends',
   columnWidth: 420,
   bracketStep: 46,
@@ -44,6 +47,16 @@ export class MermaidBracketSettingTab extends PluginSettingTab {
             this.plugin.settings.cellFormatter = v === 'obsidian' ? 'obsidian' : v === 'obmd' ? 'obmd' : 'builtin';
             await this.plugin.applySettings();
           }),
+      );
+
+    new Setting(containerEl)
+      .setName('Greek morphology in note text')
+      .setDesc('Also apply word^CODE morphology tags outside diagrams, in ordinary reading-view text. Code blocks are left alone. Styling comes from your own CSS snippet.')
+      .addToggle((t) =>
+        t.setValue(this.plugin.settings.tagMarkdownNotes).onChange(async (v) => {
+          this.plugin.settings.tagMarkdownNotes = v;
+          await this.plugin.applySettings();
+        }),
       );
 
     new Setting(containerEl)

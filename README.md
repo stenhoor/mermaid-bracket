@@ -64,6 +64,12 @@ subj  ὁ^RA----NSM- λόγος^N-----NSM-
 verb  ἦν^V-3IAI-S--
 ```
 
+Tags also work in ordinary note text, not only in diagrams: write `ὁ^RA----NSM- λόγος^N-----NSM-` in a
+paragraph, list, table or quote and reading view styles it the same way. Code blocks are left alone, and the
+behaviour can be switched off in the plugin settings. The command **Convert Greek morphology tags to HTML**
+rewrites the tags in the current note (or just the selection) as plain HTML spans, so the formatting survives
+export, publishing, or removing the plugin.
+
 The code is stripped from the rendered text and turned into CSS classes (`gk-pos-noun`,
 `gk-case-nominative`, `gk-tense-imperfect`, …) plus a `data-morph` attribute and a hover tooltip
 naming the parse. Formatting is then entirely yours: copy `docs/greek-morphology.css` into your

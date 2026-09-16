@@ -1,0 +1,112 @@
+/**
+ * Morphology tags in ordinary note text, not just in diagrams.
+ *
+ * `tagMorphInElement` runs over rendered reading-view markup and wraps `word^CODE` tokens in spans;
+ * `bakeMorphTags` does the same to the note's source text, so the formatting survives export or
+ * uninstalling the plugin. Neither imports from `obsidian`, so both are unit-testable.
+ */
+import { morphClasses, morphLabel, tokenizeMorph } from '@mermaid-bracket/diagram';
+import type { Morph } from '@mermaid-bracket/diagram';
+
+/** Elements whose text must be left alone: code, existing diagrams, already-tagged spans. */
+const SKIP_SELECTOR = 'code, pre, svg, .bracket-cell, .gk, .internal-link, .cm-inline-code';
+
+export function spanAttributes(m: Morph): { class: string; 'data-morph': string; title: string } {
+  return { class: morphClasses(m).join(' '), 'data-morph': m.code, title: morphLabel(m) };
+}
+
+/** Wrap every tagged token inside `el` in a span. Returns how many tags were applied. */
+export function tagMorphInElement(el: HTMLElement): number {
+  const doc = el.ownerDocument;
+  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+    acceptNode(node: Node): number {
+      const text = node.nodeValue ?? '';
+      if (!text.includes('^')) return NodeFilter.FILTER_REJECT;
+      if ((node.parentElement as Element | null)?.closest(SKIP_SELECTOR)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  const targets: Text[] = [];
+  let node: Node | null;
+  while ((node = walker.nextNode())) targets.push(node as Text);
+
+  let applied = 0;
+  for (const textNode of targets) {
+    const segments = tokenizeMorph(textNode.nodeValue ?? '');
+    if (!segments.some((s) => s.morph)) continue;
+    const frag = doc.createDocumentFragment();
+    for (const seg of segments) {
+      if (!seg.text) continue;
+      if (!seg.morph) {
+        frag.appendChild(doc.createTextNode(seg.text));
+        continue;
+      }
+      const span = doc.createElement('span');
+      for (const [k, v] of Object.entries(spanAttributes(seg.morph))) span.setAttribute(k, v);
+      span.textContent = seg.text;
+      frag.appendChild(span);
+      applied++;
+    }
+    textNode.parentNode?.replaceChild(frag, textNode);
+  }
+  return applied;
+}
+
+const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})/;
+
+/**
+ * Rewrite tags in Markdown source as HTML spans, skipping fenced code blocks and inline code.
+ * Returns the new text and the number of tags converted.
+ */
+export function bakeMorphTags(markdown: string): { text: string; count: number } {
+  let count = 0;
+  let fence: string | null = null;
+  const lines = markdown.split('\n').map((line) => {
+    const m = FENCE_RE.exec(line);
+    if (fence) {
+      if (m && line.trim().startsWith(fence)) fence = null;
+      return line;
+    }
+    if (m) {
+      fence = m[1]!.slice(0, 3);
+      return line;
+    }
+    const out = bakeLine(line);
+    count += out.count;
+    return out.text;
+  });
+  return { text: lines.join('\n'), count };
+}
+
+/** One line, leaving inline code spans untouched. */
+function bakeLine(line: string): { text: string; count: number } {
+  if (!line.includes('^')) return { text: line, count: 0 };
+  let count = 0;
+  const parts = line.split(/(`+[^`]*`+)/g); // odd indices are inline code
+  const text = parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      const segments = tokenizeMorph(part);
+      if (!segments.some((s) => s.morph)) return part;
+      return segments
+        .map((seg) => {
+          if (!seg.morph) return seg.text;
+          count++;
+          const attrs = Object.entries(spanAttributes(seg.morph))
+            .map(([k, v]) => `${k}="${escapeAttr(v)}"`)
+            .join(' ');
+          return `<span ${attrs}>${escapeText(seg.text)}</span>`;
+        })
+        .join('');
+    })
+    .join('');
+  return { text, count };
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+function escapeText(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
