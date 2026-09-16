@@ -66,4 +66,14 @@ describe('formatInline', () => {
     expect(html('snake__case')).toBe('snake__case');
     expect(html('snake__case', obmd)).toBe('snake__case');
   });
+
+  it('wraps a morphology-tagged token in a span of classes', () => {
+    expect(html('εἰρήνη^N-----NSF- ὑμῖν')).toBe(
+      '<span class="gk gk-pos-noun gk-case-nominative gk-number-singular gk-gender-feminine"' +
+        ' data-morph="N-----NSF-" title="noun · nominative · singular · feminine">εἰρήνη</span> ὑμῖν',
+    );
+    // The tag works inside other marks and leaves unparseable codes untouched.
+    expect(html('**χάρις^N-----NSF-**')).toContain('<strong><span class="gk gk-pos-noun');
+    expect(html('x^ZZ-')).toBe('x^ZZ-');
+  });
 });

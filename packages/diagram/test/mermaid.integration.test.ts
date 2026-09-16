@@ -130,3 +130,25 @@ verb
     expect(svg).toContain('class="sd-dotted"');
   });
 });
+
+describe('morphology tags through mermaid (strict security level)', () => {
+  it('keeps bracket cell spans and sentence tspans after DOMPurify', async () => {
+    const mermaid = (await import('mermaid')).default;
+    const { bracketDiagram, sentenceDiagram } = await import('../src/index.js');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    await mermaid.registerExternalDiagrams([bracketDiagram, sentenceDiagram], { lazyLoad: false });
+
+    const cell = await mermaid.render('morph-bracket', 'bracket\n1: ὁ^RA----NSM- λόγος^N-----NSM-\n');
+    expect(cell.svg).toContain('class="gk gk-pos-article gk-case-nominative gk-number-singular gk-gender-masculine"');
+    expect(cell.svg).toContain('data-morph="N-----NSM-"');
+    expect(cell.svg).toContain('title="noun · nominative · singular · masculine"');
+
+    const sent = await mermaid.render('morph-sentence', 'sentence\nsubj ὁ^RA----NSM- λόγος^N-----NSM-\nverb ἦν^V-3IAI-S--\n');
+    expect(sent.svg).toContain('<tspan');
+    expect(sent.svg).toContain('data-morph="V-3IAI-S--"');
+    expect(sent.svg).toContain('gk-tense-imperfect');
+    // The code itself is never drawn.
+    expect(sent.svg).not.toContain('^V-3IAI');
+    expect(sent.svg).toContain('>ἦν<');
+  });
+});

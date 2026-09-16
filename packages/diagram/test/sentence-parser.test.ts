@@ -85,4 +85,13 @@ obj τοῖς
     expect(() => parseSentence('sentence\nverb v\nobj o\n  = + καὶ a\n')).toThrow(/no previous appositive/);
     expect(() => parseSentence('sentence\n= a\n')).toThrow(/indented under/);
   });
+
+  it('strips morphology tags into segments and ignores one on a fork conjunction', () => {
+    const doc = parseSentence('sentence\nsubj χάρις^N-----NSF-\nsubj + καὶ^C- εἰρήνη\nverb ἦν^V-3IAI-S--\n');
+    const subj = doc.clauses[0]!.slots.subj!;
+    expect(subj.members[0]!.word.text).toBe('χάρις');
+    expect(subj.members[0]!.word.segments![0]!.morph!.code).toBe('N-----NSF-');
+    expect(subj.members[1]!.conj).toBe('καὶ');
+    expect(doc.clauses[0]!.slots.verb!.members[0]!.word.text).toBe('ἦν');
+  });
 });

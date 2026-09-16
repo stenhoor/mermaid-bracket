@@ -51,6 +51,26 @@ so the `=` lines fork; `ὑμῖν` sits on the base line after the complement b
 | `prep T` | slant + shelf carrying the whole phrase |
 | `gen T` (consecutive lines chain) | `/ T / T` written directly under the head |
 | `role + καί T` | fork: joins the previous member of the same role/hanger kind, conjunction on the dotted line |
+| `word^V-3AAI-P--` | MorphGNT morphology tag on that word (any slot text) |
 | `config fontSize 16`, `config gutter 0`, `config useMaxWidth true` | options; `slant`, `pad`, `gap`, `clauseGap` also exist |
 
 Phase 4b will add `part`, `inf`, `stilt`, `sub`, `rel`, `voc`, `abs`.
+
+## With morphology tags
+
+Codes are stripped from the drawn text and become CSS classes; see `docs/greek-morphology.css`. A tag on a
+`+ conj` marker is ignored, since the fork conjunction is drawn as one label (style `.sd-conj` instead).
+
+```mermaid
+---
+title: Colossians 1:2 with morphology
+---
+sentence
+subj  χάρις^N-----NSF-
+subj  + καὶ εἰρήνη^N-----NSF-
+verb
+  prep  ἀπὸ^P- θεοῦ^N-----GSM-
+    gen   πατρὸς^N-----GSM-
+    gen   ἡμῶν^RP----GP--
+comp  ὑμῖν^RP----DP--
+```

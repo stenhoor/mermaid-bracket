@@ -53,6 +53,24 @@ Syntax reference and worked examples: `examples/Colossians_1_21-23.md` (bracket)
 - Per-diagram `config` lines and a settings tab for vault-wide defaults (font size, column width, arm style, width behaviour)
 - Right-click export: copy as PNG, copy SVG markup, save SVG/PNG to the vault (cells are flattened to plain SVG text so the files open in Word, Inkscape and browsers)
 
+## Greek morphology
+
+Any word in either diagram can carry a [MorphGNT](https://github.com/morphgnt/sblgnt) parsing code,
+appended with a caret:
+
+```
+sentence
+subj  ὁ^RA----NSM- λόγος^N-----NSM-
+verb  ἦν^V-3IAI-S--
+```
+
+The code is stripped from the rendered text and turned into CSS classes (`gk-pos-noun`,
+`gk-case-nominative`, `gk-tense-imperfect`, …) plus a `data-morph` attribute and a hover tooltip
+naming the parse. Formatting is then entirely yours: copy `docs/greek-morphology.css` into your
+vault's snippets folder and edit it. The code dictionary in `packages/diagram/src/morph.ts` covers
+every value used in the SBLGNT corpus; `scripts/scan-morphgnt.mjs` regenerates the counts from a
+checkout of the corpus.
+
 ## Install (manual, until it is in the community list)
 
 1. Build: `npm install && npm run build`

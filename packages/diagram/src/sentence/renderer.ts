@@ -1,3 +1,4 @@
+import { morphClasses, morphLabel } from '../morph.js';
 import { getConfig, log } from '../mermaidUtils.js';
 import type { SentenceDb } from './db.js';
 import { DEFAULT_SENTENCE, layoutSentence } from './layout.js';
@@ -75,7 +76,25 @@ function prim(ownerDoc: Document, p: Prim): SVGElement {
   const t = el(ownerDoc, 'text', { class: `sd-${p.cls}`, x: r(p.x), y: r(p.y) });
   if (p.anchor) t.setAttribute('text-anchor', p.anchor);
   t.setAttribute('xml:space', 'preserve');
-  t.textContent = p.text;
+  if (p.segments) {
+    // Morphology-tagged words: one tspan per segment so a stylesheet can target the classes.
+    for (const seg of p.segments) {
+      if (!seg.text) continue;
+      const span = el(ownerDoc, 'tspan', {});
+      span.setAttribute('xml:space', 'preserve');
+      if (seg.morph) {
+        span.setAttribute('class', morphClasses(seg.morph).join(' '));
+        span.setAttribute('data-morph', seg.morph.code);
+        const title = el(ownerDoc, 'title', {});
+        title.textContent = morphLabel(seg.morph);
+        span.appendChild(title);
+      }
+      span.appendChild(ownerDoc.createTextNode(seg.text));
+      t.appendChild(span);
+    }
+  } else {
+    t.textContent = p.text;
+  }
   return t;
 }
 

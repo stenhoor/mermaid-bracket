@@ -14,6 +14,8 @@ export interface CellFormatter {
   format(text: string, ctx: FormatContext): Node | Promise<Node>;
 }
 
+import { lastTokenStart, morphClasses, morphLabel, MORPH_CODE_RE, parseMorph } from './morph.js';
+
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
 
 /**
@@ -22,6 +24,7 @@ const XHTML_NS = 'http://www.w3.org/1999/xhtml';
  *   |   red proposition-boundary bar
  *   {…} blue square brackets around the text
  *   \x  literal x
+ *   word^V-3AAI-P--  MorphGNT morphology tag on the preceding token (see morph.ts)
  */
 export interface InlineOptions {
   /**
@@ -132,6 +135,24 @@ export function formatInline(text: string, ownerDoc: Document, opts: InlineOptio
       else buf += ch;
       i++;
       continue;
+    }
+    if (ch === '^') {
+      // Morphology tag: `word^V-3AAI-P--` becomes a span of classes around the preceding token.
+      const m = MORPH_CODE_RE.exec(text.slice(i));
+      const morph = m ? parseMorph(m[1]!) : null;
+      const start = lastTokenStart(buf);
+      if (morph && buf.slice(start)) {
+        const token = buf.slice(start);
+        buf = buf.slice(0, start);
+        flush();
+        const span = mk('span', morphClasses(morph).join(' '));
+        span.setAttribute('data-morph', morph.code);
+        span.setAttribute('title', morphLabel(morph));
+        span.textContent = token;
+        container.appendChild(span);
+        i += m![0].length;
+        continue;
+      }
     }
     if (MARKS[two] && (two !== '__' || isWordBoundaryUnderscore(text, i, 2))) {
       if (innermost() === two) {

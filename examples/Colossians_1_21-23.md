@@ -167,6 +167,7 @@ The built-in formatter (default; identical in every Mermaid host):
 | `{text}` | blue square brackets around the text | `Colossians_2_16-23.pdf`, `Colossians_3_12-17.pdf` |
 | `\x` | literal `x` (escape `\|`, `\{`, `\*`, …) | |
 | `•`, `[τὰ]` | literal, no escaping needed | NA28 text |
+| `word^N-----NSF-` | MorphGNT morphology tag on that word: stripped from the text, emitted as CSS classes (see `docs/greek-morphology.css`) | |
 | `=={r}text==`, `**{b}text**` | Style Obmd colour keys (r o y g b p gray), in the "Built-in + Style Obmd colours" or Obsidian Markdown mode | |
 | `__{r}text__`, `__text__` | coloured / plain underline, "Built-in + Style Obmd colours" mode only (elsewhere `__text__` is bold) | |
 

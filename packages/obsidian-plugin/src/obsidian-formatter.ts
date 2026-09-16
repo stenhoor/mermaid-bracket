@@ -1,6 +1,6 @@
 import { MarkdownRenderer } from 'obsidian';
 import type { App, Component } from 'obsidian';
-import { obmdKeyAt } from '@mermaid-bracket/diagram';
+import { lastTokenStart, morphClasses, morphLabel, MORPH_CODE_RE, obmdKeyAt, parseMorph } from '@mermaid-bracket/diagram';
 import type { CellFormatter, FormatContext } from '@mermaid-bracket/diagram';
 
 /**
@@ -45,6 +45,18 @@ export function preconvertMarks(text: string): string {
       const stop = end === -1 ? text.length : end + 2;
       out += text.slice(i, stop);
       i = stop - 1;
+    } else if (ch === '^' && MORPH_CODE_RE.test(text.slice(i))) {
+      // Morphology tag: wrap the preceding token so Obsidian's renderer keeps the classes.
+      const m = MORPH_CODE_RE.exec(text.slice(i))!;
+      const morph = parseMorph(m[1]!);
+      const start = lastTokenStart(out);
+      const token = out.slice(start);
+      if (morph && token && !token.includes('>')) {
+        out = out.slice(0, start) + `<span class="${morphClasses(morph).join(' ')}" data-morph="${morph.code}" title="${morphLabel(morph)}">${token}</span>`;
+        i += m[0].length - 1;
+      } else {
+        out += ch;
+      }
     } else if (ch === '|') {
       out += '<span class="bracket-bar">|</span>';
     } else if (ch === '{' && /(==|\*\*|__)$/.test(text.slice(0, i)) && obmdKeyAt(text, i)) {

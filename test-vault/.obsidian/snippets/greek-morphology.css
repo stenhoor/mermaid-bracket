@@ -1,0 +1,66 @@
+/*
+ * Mermaid Bracket — sample morphology stylesheet
+ *
+ * Copy this into <vault>/.obsidian/snippets/greek-morphology.css and enable it under
+ * Settings → Appearance → CSS snippets. Delete the rules you do not want; nothing here is
+ * applied by the plugin itself, which only emits the classes.
+ *
+ * Tag a word in a diagram with a MorphGNT code:  λόγος^N-----NSM-
+ * That produces, in bracket cells a <span> and in sentence diagrams a <tspan>, carrying:
+ *
+ *   gk                          every tagged word
+ *   gk-pos-…                    noun adjective verb adverb conjunction preposition particle
+ *                               interjection article demonstrative interrogative personal relative
+ *   gk-person-…                 1 2 3
+ *   gk-tense-…                  present imperfect future aorist perfect pluperfect
+ *   gk-voice-…                  active middle passive
+ *   gk-mood-…                   indicative imperative subjunctive optative infinitive participle
+ *   gk-case-…                   nominative genitive dative accusative vocative
+ *   gk-number-…                 singular plural
+ *   gk-gender-…                 masculine feminine neuter
+ *   gk-degree-…                 comparative superlative
+ *
+ * plus data-morph="N-----NSM-" for exact targeting, and a hover tooltip naming the parse.
+ * HTML cells take `color`; SVG words take `fill`. Rules below set both so they work in either.
+ */
+
+/* ---- Case, the most common thing to colour ---------------------------------------------- */
+.gk-case-nominative { color: #1b6ac9; fill: #1b6ac9; }
+.gk-case-genitive   { color: #9a3fbf; fill: #9a3fbf; }
+.gk-case-dative     { color: #1f9d55; fill: #1f9d55; }
+.gk-case-accusative { color: #d1442f; fill: #d1442f; }
+.gk-case-vocative   { color: #c48a00; fill: #c48a00; }
+
+/* ---- Verb shape ------------------------------------------------------------------------- */
+.gk-pos-verb          { font-weight: 700; }
+.gk-mood-participle   { font-style: italic; font-weight: 400; }
+.gk-mood-infinitive   { font-style: italic; }
+.gk-mood-imperative   { text-decoration: underline; text-underline-offset: 2px; }
+.gk-mood-subjunctive,
+.gk-mood-optative     { opacity: 0.85; font-style: italic; }
+
+/* ---- Tense, as a subtle underline colour on finite verbs -------------------------------- */
+.gk-pos-verb.gk-tense-aorist  { text-decoration-color: #d1442f; }
+.gk-pos-verb.gk-tense-present { text-decoration-color: #1f9d55; }
+.gk-pos-verb.gk-tense-perfect { text-decoration-color: #9a3fbf; }
+
+/* ---- Function words, played down so content words stand out ----------------------------- */
+.gk-pos-article,
+.gk-pos-particle { opacity: 0.6; }
+
+/* ---- Alternative: one colour per part of speech (comment out the case block above) ------ */
+/*
+.gk-pos-noun        { color: #1b6ac9; fill: #1b6ac9; }
+.gk-pos-verb        { color: #d1442f; fill: #d1442f; }
+.gk-pos-adjective   { color: #1f9d55; fill: #1f9d55; }
+.gk-pos-adverb      { color: #9a3fbf; fill: #9a3fbf; }
+.gk-pos-conjunction { color: #c48a00; fill: #c48a00; }
+.gk-pos-preposition { color: #00868b; fill: #00868b; }
+*/
+
+/* ---- Target one exact parse ------------------------------------------------------------- */
+/* [data-morph="V-3AAI-P--"] { background: #fff3a0; } */
+
+/* Dark themes: the colours above are chosen to work on both, but you can override here. */
+.theme-dark .gk-pos-article,
+.theme-dark .gk-pos-particle { opacity: 0.7; }

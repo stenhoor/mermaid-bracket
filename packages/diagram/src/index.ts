@@ -41,6 +41,8 @@ export type { Layout, LayoutConfig, BracketBox, ArmBox, RowBox } from './layout.
 export { RELATIONSHIPS, lookupRelationship } from './relationships.js';
 export type { BracketDocument, TreeNode, BracketNode, LeafNode, Row, RelationshipGroup } from './model.js';
 export { BracketParseError } from './model.js';
+export { MORPH_POS, MORPH_SLOTS, MORPH_CODE_RE, parseMorph, morphClasses, morphLabel, tokenizeMorph, stripMorph, hasMorph, lastTokenStart } from './morph.js';
+export type { Morph, MorphSegment, MorphSlotName, CodeEntry } from './morph.js';
 
 // Second diagram type: sentence diagrams (KoineWorks / Biblearc Greek Reed–Kellogg).
 export * from './sentence/index.js';

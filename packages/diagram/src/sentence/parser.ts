@@ -1,3 +1,4 @@
+import { hasMorph, stripMorph, tokenizeMorph } from '../morph.js';
 import { SentenceParseError, SLOT_ORDER } from './model.js';
 import type { ApposMember, Clause, HangerGroup, HangerKind, HangerMember, SentenceDocument, Slot, SlotMember, SlotRole, Word } from './model.js';
 
@@ -80,7 +81,7 @@ export function parseSentence(text: string): SentenceDocument {
       if (!head) throw new SentenceParseError('`=` must be indented under the word it renames', lineNo);
       if (!rest) throw new SentenceParseError('`=` needs text', lineNo);
       const { conj: aconj, body: abody } = splitConj(rest);
-      const member: ApposMember = { word: { text: abody, appos: [] }, hangers: [] };
+      const member: ApposMember = { word: makeWord(abody), hangers: [] };
       if (aconj) {
         if (head.appos.length === 0) throw new SentenceParseError('`= + …` has no previous appositive to join', lineNo);
         member.conj = aconj;
@@ -157,14 +158,24 @@ export function parseSentence(text: string): SentenceDocument {
 function splitConj(rest: string): { conj?: string; body: string } {
   const m = /^\+\s+(\S+)\s*(.*)$/.exec(rest);
   if (!m) return { body: rest };
-  return { conj: m[1]!, body: (m[2] ?? '').trim() };
+  // A morphology tag on the conjunction marker is stripped: the fork conjunction is drawn as a
+  // single label (class `sd-conj`), not as a taggable word.
+  return { conj: stripMorph(m[1]!), body: (m[2] ?? '').trim() };
 }
 
 /** "τῷ θεῷ = πατρὶ = ὁ πατήρ" → word with inline appositives. Empty text is allowed (empty slot). */
 function parseWord(body: string): Word {
   const parts = body.split(/\s+=\s+|^=\s+/).map((p) => p.trim());
-  const text = parts.shift() ?? '';
-  return { text, appos: parts.filter(Boolean).map((t) => ({ word: { text: t, appos: [] }, hangers: [] })) };
+  const head = makeWord(parts.shift() ?? '');
+  head.appos = parts.filter(Boolean).map((t) => ({ word: makeWord(t), hangers: [] }));
+  return head;
+}
+
+/** Strips `^CODE` morphology tags into segments; `text` is what gets measured and drawn. */
+function makeWord(raw: string): Word {
+  const word: Word = { text: stripMorph(raw), appos: [] };
+  if (hasMorph(raw)) word.segments = tokenizeMorph(raw);
+  return word;
 }
 
 function leadingIndent(ws: string): number {

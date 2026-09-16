@@ -1,3 +1,4 @@
+import type { MorphSegment } from '../morph.js';
 import { SLOT_ORDER } from './model.js';
 import type { ApposMember, Clause, HangerGroup, HangerMember, SentenceDocument, SlotMember, SlotRole, Word } from './model.js';
 
@@ -46,6 +47,8 @@ export interface TextPrim {
   x: number;
   y: number;
   text: string;
+  /** When present the renderer draws these as tspans, so morphology classes survive. */
+  segments?: MorphSegment[];
   cls: 'word' | 'appos' | 'eq' | 'conj' | 'verse' | 'title' | 'gen';
   anchor?: 'start' | 'end' | 'middle';
 }
@@ -312,7 +315,9 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
   let x = ox + textInset + cfg.pad * 0.5;
   const tw = measure(word.text, 'word');
   if (word.text) {
-    prims.push({ kind: 'text', x, y: textY, text: word.text, cls: 'word' });
+    const wordPrim: TextPrim = { kind: 'text', x, y: textY, text: word.text, cls: 'word' };
+    if (word.segments) wordPrim.segments = word.segments;
+    prims.push(wordPrim);
     boxes.push({ x0: x, y0: textY - fs, x1: x + tw, y1: oy });
   }
   if (word.verse) verses.push({ y: textY, text: word.verse });
@@ -395,7 +400,9 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
       let subBottom = ty + fs * 0.45;
       for (const m of g.members) {
         const label = `/ ${m.word.text}`;
-        prims.push({ kind: 'text', x, y: ty, text: label, cls: 'gen' });
+        const genPrim: TextPrim = { kind: 'text', x, y: ty, text: label, cls: 'gen' };
+        if (m.word.segments) genPrim.segments = [{ text: '/ ' }, ...m.word.segments];
+        prims.push(genPrim);
         const w = measure(label, 'gen');
         boxes.push({ x0: x, y0: ty - fs, x1: x + w, y1: ty + fs * 0.3 });
         if (m.word.verse) verses.push({ y: ty, text: m.word.verse });

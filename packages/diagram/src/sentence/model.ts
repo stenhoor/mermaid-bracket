@@ -6,8 +6,13 @@ export const SLOT_ORDER: readonly SlotRole[] = ['subj', 'verb', 'obj', 'obj2', '
 /** Hanger kinds supported in phase 4a. (part, inf, stilt, sub, rel, voc, abs arrive in 4b.) */
 export type HangerKind = 'mod' | 'prep' | 'gen';
 
+import type { MorphSegment } from '../morph.js';
+
 export interface Word {
+  /** Display text, with any `^CODE` morphology tags stripped. */
   text: string;
+  /** Set when the text carried morphology tags; used by the renderer to emit tagged tspans. */
+  segments?: MorphSegment[];
   /** Appositives joined by "=" after the word: a chain, or a fork when members carry `conj`. */
   appos: ApposMember[];
   /** Verse reference attached to this word (from a preceding `verse` line). */
