@@ -11,6 +11,8 @@
  *   gk                          every tagged word
  *   gk-pos-…                    noun adjective verb adverb conjunction preposition particle
  *                               interjection article demonstrative interrogative personal relative
+ *   data-lemma="…"              dictionary form, when the bundled lexicon is on; the only way to
+ *                               tell a first, second or third person pronoun apart
  *   gk-person-…                 1 2 3
  *   gk-tense-…                  present imperfect future aorist perfect pluperfect
  *   gk-voice-…                  active middle passive
@@ -52,6 +54,22 @@
 .gk-mood-imperative { font-weight: 800; letter-spacing: 0.03em; }
 .gk-mood-subjunctive,
 .gk-mood-optative   { font-style: italic; opacity: 0.85; }
+
+/* ---- Pronouns --------------------------------------------------------------------------- */
+/* MorphGNT gives five classes in the "pos" slot: article, personal, demonstrative,
+   interrogative/indefinite and relative. They take case, number and gender like nouns, so the
+   case colours above already apply; these rules add the class on top. */
+.gk-pos-relative      { font-style: italic; }
+.gk-pos-demonstrative { text-decoration-line: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+.gk-pos-interrogative { font-weight: 600; }
+.gk-pos-personal      { font-style: normal; }
+
+/* The corpus does not mark person on pronouns, so first, second and third person cannot be read
+   from the code. The lemma distinguishes them, and it is available as data-lemma whenever the
+   bundled lexicon is switched on. */
+[data-lemma="ἐγώ"]    { border-bottom: 1px solid currentColor; }   /* I, we */
+[data-lemma="σύ"]     { border-bottom: 1px dashed currentColor; }  /* you */
+/* [data-lemma="αὐτός"], [data-lemma="ἑαυτοῦ"] { }                    he, she, it, they; -self */
 
 /* ---- Function words, played down so content words stand out ----------------------------- */
 .gk-pos-article,
