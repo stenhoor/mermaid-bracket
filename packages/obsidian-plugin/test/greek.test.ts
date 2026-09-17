@@ -176,4 +176,23 @@ describe('buildGlossary and renderGlossary', () => {
     expect(stripGreekTags('λόγος^N-----NSM- plain').text).toBe('λόγος plain');
     expect(stripGreekTags('nothing here')).toEqual({ text: 'nothing here', removed: 0 });
   });
+
+  it('counts words, not the Greek inside data-lemma and title attributes', () => {
+    setMorphInfoProvider((w) => wordInfo(w));
+    try {
+      const plain = 'Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.';
+      const tagged = tagGreekAsHtml(plain, index).text;
+      expect(tagged).toContain('data-lemma="λόγος"'); // the attributes that used to be counted
+      const counts = (src: string) =>
+        buildGlossary(src, index)
+          .map((r) => `${r.lemma}=${r.count}`)
+          .join(' ');
+      expect(counts(tagged)).toBe(counts(plain));
+      expect(counts(plain)).toContain('λόγος=2');
+      // Code-form tagging likewise never writes into markup.
+      expect(autoTagGreek(tagged, index).text).toBe(tagged);
+    } finally {
+      setMorphInfoProvider(null);
+    }
+  });
 });

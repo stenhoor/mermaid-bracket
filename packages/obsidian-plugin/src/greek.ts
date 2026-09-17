@@ -57,8 +57,14 @@ export function autoTagGreek(markdown: string, index: GreekIndex, opts: AutoTagO
     skipped.set(form, (skipped.get(form) ?? 0) + 1);
   };
 
-  const text = mapOutsideCode(markdown, (chunk) => {
-    GREEK_WORD_RE.lastIndex = 0;
+  const text = mapOutsideCode(markdown, (chunk) =>
+    // Existing markup, and the words already wrapped in it, are left exactly as they are.
+    splitKeepingMarkup(chunk)
+      .map((part) => (part.markup ? part.text : tagChunk(part.text)))
+      .join(''),
+  );
+
+  function tagChunk(chunk: string): string {
     let out = '';
     let last = 0;
     for (const m of chunk.matchAll(GREEK_WORD_RE)) {
@@ -86,13 +92,31 @@ export function autoTagGreek(markdown: string, index: GreekIndex, opts: AutoTagO
       else partial++;
     }
     return out + chunk.slice(last);
-  });
+  }
 
   return { text, tagged, partial, skipped };
 }
 
 /** Words already wrapped in a span, and the tags themselves, must not be touched again. */
 const HTML_SPAN_RE = /<span\b[^>]*>[\s\S]*?<\/span>|<[^>]+>/g;
+
+/** Just the tags. Their attributes hold Greek (data-lemma, title) that is markup, not text. */
+const HTML_TAG_RE = /<[^>]+>/g;
+
+/** The readable text of a chunk: everything outside HTML tags, attributes excluded. */
+function textOutsideTags(chunk: string): string[] {
+  if (!chunk.includes('<')) return [chunk];
+  const out: string[] = [];
+  let last = 0;
+  HTML_TAG_RE.lastIndex = 0;
+  for (const m of chunk.matchAll(HTML_TAG_RE)) {
+    const start = m.index ?? 0;
+    if (start > last) out.push(chunk.slice(last, start));
+    last = start + m[0].length;
+  }
+  out.push(chunk.slice(last));
+  return out;
+}
 
 export interface HtmlTagResult extends AutoTagResult {
   /** Words that carried a hand-written ^CODE, which is honoured rather than looked up. */
@@ -217,7 +241,7 @@ export function buildGlossary(markdown: string, index: GreekIndex, opts: Glossar
   const exclude = new Set(opts.excludePos ?? []);
   const byLemma = new Map<string, GlossaryRow>();
   mapOutsideCode(markdown, (chunk) => {
-    for (const m of chunk.matchAll(GREEK_WORD_RE)) {
+    for (const m of textOutsideTags(chunk).join(' ').matchAll(GREEK_WORD_RE)) {
       const word = m[0];
       const found = lookupWord(index, word);
       if (!found?.lemmas.length) continue;
