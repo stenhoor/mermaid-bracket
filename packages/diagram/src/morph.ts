@@ -18,6 +18,8 @@ export interface CodeEntry {
   name: string;
   /** Class suffix, appended to `<prefix>-<slot>-`. */
   cls: string;
+  /** Broader class emitted alongside `cls`, so a stylesheet can select the whole family. */
+  group?: string;
 }
 
 /** Part of speech: the first column of a MorphGNT line. Counts are corpus occurrences. */
@@ -29,10 +31,10 @@ export const MORPH_POS: Readonly<Record<string, CodeEntry>> = {
   'N-': { name: 'noun', cls: 'noun' }, // 28,237
   'P-': { name: 'preposition', cls: 'preposition' }, // 10,877
   RA: { name: 'definite article', cls: 'article' }, // 19,770
-  RD: { name: 'demonstrative pronoun', cls: 'demonstrative' }, // 1,740
-  RI: { name: 'interrogative/indefinite pronoun', cls: 'interrogative' }, // 1,160
-  RP: { name: 'personal pronoun', cls: 'personal' }, // 11,523
-  RR: { name: 'relative pronoun', cls: 'relative' }, // 1,677
+  RD: { name: 'demonstrative pronoun', cls: 'demonstrative', group: 'pronoun' }, // 1,740
+  RI: { name: 'interrogative/indefinite pronoun', cls: 'interrogative', group: 'pronoun' }, // 1,160
+  RP: { name: 'personal pronoun', cls: 'personal', group: 'pronoun' }, // 11,523
+  RR: { name: 'relative pronoun', cls: 'relative', group: 'pronoun' }, // 1,677
   'V-': { name: 'verb', cls: 'verb' }, // 28,056
   'X-': { name: 'particle', cls: 'particle' }, // 979
 };
@@ -147,9 +149,14 @@ export function parseMorph(raw: string): Morph | null {
   return { code: pos + rest, pos, posName: MORPH_POS[pos]!.name, parts };
 }
 
-/** CSS classes for a parsed code: a marker class, the part of speech, and one per filled slot. */
+/**
+ * CSS classes for a parsed code: a marker class, the part of speech, its family where it has one
+ * (the four pronoun classes also emit `-pos-pronoun`), and one class per filled slot.
+ */
 export function morphClasses(m: Morph, prefix = 'gk'): string[] {
-  const out = [prefix, `${prefix}-pos-${MORPH_POS[m.pos]!.cls}`];
+  const pos = MORPH_POS[m.pos]!;
+  const out = [prefix, `${prefix}-pos-${pos.cls}`];
+  if (pos.group) out.push(`${prefix}-pos-${pos.group}`);
   for (const p of m.parts) out.push(`${prefix}-${p.slot}-${p.cls}`);
   return out;
 }

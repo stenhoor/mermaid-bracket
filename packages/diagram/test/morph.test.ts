@@ -57,6 +57,23 @@ describe('morphClasses and morphLabel', () => {
     ]);
     expect(morphLabel(m)).toBe('verb · second person · present · active · imperative · singular');
   });
+
+  it('gives the four pronoun classes a shared pronoun class', () => {
+    expect(morphClasses(parseMorph('RP----GSM-')!)).toEqual([
+      'gk',
+      'gk-pos-personal',
+      'gk-pos-pronoun',
+      'gk-case-genitive',
+      'gk-number-singular',
+      'gk-gender-masculine',
+    ]);
+    for (const code of ['RD----APN-', 'RI----ASN-', 'RR----ASF-']) {
+      expect(morphClasses(parseMorph(code)!)).toContain('gk-pos-pronoun');
+    }
+    // The article is not a pronoun, and neither is anything else.
+    expect(morphClasses(parseMorph('RA----NSM-')!)).not.toContain('gk-pos-pronoun');
+    expect(morphClasses(parseMorph('N-----NSM-')!)).not.toContain('gk-pos-pronoun');
+  });
 });
 
 describe('tokenizeMorph', () => {

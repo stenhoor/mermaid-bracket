@@ -83,7 +83,7 @@ paragraph has its own switch under Settings → Mermaid Bracket → Greek lookup
 on hover and which columns the glossary includes.
 
 The code is stripped from the rendered text and turned into CSS classes (`gk-pos-noun`,
-`gk-case-nominative`, `gk-tense-imperfect`, …) plus a `data-morph` attribute and a hover tooltip
+`gk-case-nominative`, `gk-tense-imperfect`, …; the four pronoun classes also carry `gk-pos-pronoun`) plus a `data-morph` attribute and a hover tooltip
 naming the parse. Formatting is then entirely yours: copy `docs/greek-morphology.css` into your
 vault's snippets folder and edit it. The code dictionary in `packages/diagram/src/morph.ts` covers
 every value used in the SBLGNT corpus; `scripts/scan-morphgnt.mjs` regenerates the counts from a

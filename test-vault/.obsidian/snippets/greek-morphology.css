@@ -9,11 +9,13 @@
  * That produces, in bracket cells a <span> and in sentence diagrams a <tspan>, carrying:
  *
  *   gk                          every tagged word
- *   gk-pos-…                    noun adjective verb adverb conjunction preposition particle
- *                               interjection article demonstrative interrogative personal relative
+ *   gk-pos-…                    noun adjective verb adverb conjunction preposition
+ *                               particle interjection article
+ *                               personal demonstrative interrogative relative  ← the four pronouns,
+ *                               which also all carry gk-pos-pronoun
+ *   gk-person-…                 1 2 3   (verbs only: the corpus never marks person on a pronoun)
  *   data-lemma="…"              dictionary form, when the bundled lexicon is on; the only way to
  *                               tell a first, second or third person pronoun apart
- *   gk-person-…                 1 2 3
  *   gk-tense-…                  present imperfect future aorist perfect pluperfect
  *   gk-voice-…                  active middle passive
  *   gk-mood-…                   indicative imperative subjunctive optative infinitive participle
@@ -56,9 +58,10 @@
 .gk-mood-optative   { font-style: italic; opacity: 0.85; }
 
 /* ---- Pronouns --------------------------------------------------------------------------- */
-/* MorphGNT gives five classes in the "pos" slot: article, personal, demonstrative,
-   interrogative/indefinite and relative. They take case, number and gender like nouns, so the
-   case colours above already apply; these rules add the class on top. */
+/* Four pronoun classes, each with its own class and all sharing gk-pos-pronoun. They take case,
+   number and gender like nouns, so the case colours above already apply; these add to them.
+   The definite article is kept separate, since it is not a pronoun. */
+/* .gk-pos-pronoun { font-variant: small-caps; }   all pronouns at once */
 .gk-pos-relative      { font-style: italic; }
 .gk-pos-demonstrative { text-decoration-line: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 .gk-pos-interrogative { font-weight: 600; }
