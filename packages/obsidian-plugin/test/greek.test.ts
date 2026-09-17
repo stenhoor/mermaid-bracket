@@ -95,4 +95,34 @@ describe('buildGlossary and renderGlossary', () => {
     expect(all.find((r) => r.lemma === 'ὁ')!.pos).toBe('RA');
     expect(all.find((r) => r.lemma === 'καί')!.pos).toBe('C-');
   });
+
+  it('never reads a diagram: Greek inside a mermaid block is invisible to both glossaries', () => {
+    const note = [
+      'Prose before: ἀγάπη.',
+      '',
+      '```mermaid',
+      'sentence',
+      'subj  χάρις',
+      'verb  ἦν',
+      '```',
+      '',
+      '```mermaid',
+      'bracket',
+      '1: εἰρήνη ὑμῖν',
+      '```',
+      '',
+      'Prose after: ἀγάπη.',
+    ].join('\n');
+    const lemmas = buildGlossary(note, index).map((r) => r.lemma);
+    expect(lemmas).toEqual(['ἀγάπη']);
+    expect(buildGlossary(note, index)[0]!.count).toBe(2); // both prose occurrences, neither diagram
+    expect(buildGlossary(note, index, { sort: 'frequency', excludePos: FUNCTION_WORD_POS }).map((r) => r.lemma)).toEqual([
+      'ἀγάπη',
+    ]);
+    // Tagging leaves the diagrams untouched as well.
+    const { text } = autoTagGreek(note, index);
+    expect(text).toContain('subj  χάρις\n');
+    expect(text).toContain('1: εἰρήνη ὑμῖν');
+    expect(text).toContain('ἀγάπη^N-----NSF-');
+  });
 });
