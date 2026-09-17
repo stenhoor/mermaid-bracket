@@ -3,11 +3,11 @@
 Working pages for the method the `bracket` diagram draws. The source sheets are the PDFs in `documents/`;
 these are the readable versions, with the relationship diagrams live rather than pictures.
 
-- **[The 18 logical relationships](18-logical-relationships.md)** — the four families, what each relationship
-  claims, the conjunctions that signal it, a scripture example, and a diagram you can copy.
+- **[The 18 Logical Relationships](18-logical-relationships.md)** — the four families, each relationship's
+  definition, conjunctions and example, with its shape drawn as a diagram.
 - **[English conjunctions](english-conjunctions.md)** — 62 headwords and the relationships each can signal.
 - **[Greek conjunctions](greek-conjunctions.md)** — 64 headwords, likewise.
-- **[Example sentences](example-sentences.md)** — all eighteen in plain English, one everyday sentence each.
+- **[Example sentences](example-sentences.md)** — one sentence per relationship, on a birthday-party theme.
 
 ## Reading a bracket
 
@@ -46,7 +46,7 @@ The star sits on the arm that carries the argument: here the purpose, not the ac
 
 ## Credit
 
-The method, the eighteen relationships and the conjunction lists are Biblearc's
-([biblearc.com](https://biblearc.com)). The conjunction tables are transcribed from their sheets; the
-definitions and the everyday example sentences here are written for this repository rather than copied, so
-these pages can live in a public project. The original PDFs are in `documents/` for reference.
+All of this material is Biblearc's ([biblearc.com](https://biblearc.com)): the method, the eighteen
+relationships, the definitions, the conjunction lists and the example sentences. These pages are a
+conversion of their four sheets in `documents/` into Markdown, with the relationship diagrams drawn live
+rather than as pictures. The originals remain in `documents/`.

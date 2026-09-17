@@ -1,33 +1,29 @@
-# The 18 logical relationships
+# The 18 Logical Relationships
 
-Every bracket joins propositions with one of eighteen relationships. They fall into four families, and the
-family decides the colour a bracket is drawn in. Definitions here are written for this reference; the
-originals are Biblearc's sheets in `documents/`.
+Converted from Biblearc's sheet (`documents/The18LogicalRelationshipsEng.pdf`). The definitions,
+conjunction lists and examples are the sheet's own wording; the layout is linear rather than two-column,
+and each relationship's shape is drawn as a live `bracket` diagram instead of the sheet's small glyph.
 
-The grey star marks the **main point** of a relationship: the proposition the other one serves. Coordinate
-relationships have no main point, because their members are equals.
+On the sheet, the grey dot indicates the relationship's main point. In these diagrams that is the arm
+marked with a star.
 
-| | Family | Colour | Relationships |
-|---|---|---|---|
-| 1 | [Coordinate](#coordinate) | green | `S` `P` `A` |
-| 2 | [Support by distinct statement](#support-by-distinct-statement) | red | `G` `∴` `BL` `Ac/Res` `Ac/Pur` `If/Th` `T` `L` |
-| 3 | [Support by restatement](#support-by-restatement) | blue | `Ac/Mn` `Cf` `-/+` `Id/Exp` `Q/A` |
-| 4 | [Support by contrary statement](#support-by-contrary-statement) | orange | `Csv` `Sit/R` |
+| Family | Colour | Relationships |
+|---|---|---|
+| [Coordinate](#coordinate-relationships) | green | `S` `P` `A` |
+| [Support by distinct statement](#support-by-distinct-statement) | red | `G` `∴` `BL` `Ac/Res` `Ac/Pur` `If/Th` `T` `L` |
+| [Support by restatement](#support-by-restatement) | blue | `Ac/Mn` `Cf` `-/+` `Id/Exp` `Q/A` |
+| [Support by contrary statement](#support-by-contrary-statement) | orange | `Csv` `Sit/R` |
 
 ---
 
-## Coordinate
+## Coordinate Relationships
 
-Members of equal rank. Two or more propositions sit side by side under one label, and no member is
-subordinate to another.
+### Series (S)
 
-### Series — `S`
+Each proposition makes its own independent contribution to a whole.
 
-Each proposition makes its own independent contribution to a single whole. Order could be changed without
-damage.
-
-- **Look for:** and, moreover, likewise, neither, nor · καί, δέ
-- **Scripture:** Colossians 1:28
+- **Conjunctions:** and, moreover, likewise, neither, nor, καί, δέ.
+- **Example:** warning everyone and teaching everyone with all wisdom (Colossians 1:28)
 
 ```mermaid
 bracket
@@ -35,15 +31,16 @@ S
   1
   2
 1: warning everyone
-2: teaching everyone with all wisdom
+2: and teaching everyone with all wisdom
 ```
 
-### Progression — `P`
+### Progression (P)
 
-Like Series, but the members advance: each is a further step toward a climax, so their order matters.
+Like series, but each proposition is a further step toward a climax.
 
-- **Look for:** then, next, furthermore, finally · καί, δέ, τότε
-- **Scripture:** Mark 4:28
+- **Conjunctions:** then, and, moreover, furthermore, καί, δέ.
+- **Example:** The earth produces by itself, first the blade, then the ear, then the full grain in the ear
+  (Mark 4:28)
 
 ```mermaid
 bracket
@@ -51,17 +48,17 @@ P
   1
   2
   3
-1: first the blade
-2: then the ear
+1: first the blade,
+2: then the ear,
 3: then the full grain in the ear
 ```
 
-### Alternative — `A`
+### Alternative (A)
 
-Each member is a different possibility arising from one situation. One or the other, not both.
+Each proposition expresses a different possibility arising from a situation.
 
-- **Look for:** or, whether … or · ἤ, εἴτε
-- **Scripture:** Matthew 11:3
+- **Conjunctions:** or, but, while, on the other hand, ἤ, δέ, μέν.
+- **Example:** Are you the one who is to come, or shall we look for another? (Matthew 11:3)
 
 ```mermaid
 bracket
@@ -74,16 +71,14 @@ A
 
 ---
 
-## Support by distinct statement
+## Support by Distinct Statement
 
-A supporting proposition that adds new content, rather than restating what has been said.
+### Ground (G)
 
-### Ground — `G`
+A statement and the argument or reason for that statement (supporting proposition follows).
 
-A statement followed by the reason for it. The supporting proposition comes second; the main point is first.
-
-- **Look for:** for, because, since · γάρ, ὅτι, ἐπεί, διότι
-- **Scripture:** Matthew 5:3
+- **Conjunctions:** for, because, since, γάρ, ὅτι, ἐπεί, διότι.
+- **Example:** Blessed are the poor in spirit, for theirs is the kingdom of heaven (Matthew 5:3)
 
 ```mermaid
 bracket
@@ -91,15 +86,15 @@ G
   *  1
   G  2
 1: Blessed are the poor in spirit,
-2: for theirs is the kingdom of heaven.
+2: for theirs is the kingdom of heaven
 ```
 
-### Inference — `∴`
+### Inference (∴)
 
-The mirror of Ground: the reason comes first and the conclusion follows. The main point is the conclusion.
+A statement and the argument or reason for that statement (supporting proposition precedes).
 
-- **Look for:** therefore, so, accordingly · οὖν, διό, ἄρα
-- **Scripture:** 1 Peter 4:7
+- **Conjunctions:** therefore, accordingly, οὖν, διό, ὅπως.
+- **Example:** The end of all things is at hand; therefore be self-controlled and sober-minded (1 Peter 4:7)
 
 ```mermaid
 bracket
@@ -107,23 +102,24 @@ Inf
   Inf 1
   *   2
 1: The end of all things is at hand;
-2: therefore be self-controlled and sober-minded.
+2: therefore be self-controlled and sober-minded
 ```
 
-### Bilateral — `BL`
+### Bilateral (BL)
 
-One proposition supporting two others, one before it and one after. It is Ground and Inference combined,
-which is why the conjunction sheets leave it out.
+A proposition that supports two other propositions, one preceding and one following.
 
-- **Look for:** for, because, therefore, so · γάρ, ὅτι, οὖν, διό
-- **Scripture:** Romans 8:7–8
+- **Conjunctions:** for, because, therefore, so, γάρ, ὅτι, οὖν, διό.
+- **Example:** For the mind that is set on the flesh is hostile to God, for it does not submit to God's law;
+  indeed, it cannot. Those who are in the flesh cannot please God. (Romans 8:7-8)
 
-### Action-Result — `Ac/Res`
+### Action-Result (Ac/Res)
 
-An action and the consequence that follows from it, whether or not anyone intended it.
+An action and a consequence or result which accompanies that action.
 
-- **Look for:** so that, with the result that · ὥστε
-- **Scripture:** Matthew 8:24
+- **Conjunctions:** so that, that, with the result that, ὥστε.
+- **Example:** there arose a great storm on the sea, so that the boat was being swamped by the waves
+  (Matthew 8:24)
 
 ```mermaid
 bracket
@@ -134,12 +130,12 @@ Ac/Res
 2: so that the boat was being swamped by the waves
 ```
 
-### Action-Purpose — `Ac/Pur`
+### Action-Purpose (Ac/Pur)
 
-An action and its intended result. Purpose differs from result in that it looks forward to an aim.
+An action and its intended result.
 
-- **Look for:** in order that, so that, lest · ἵνα, ὅπως, εἰς τό, μήποτε
-- **Scripture:** Colossians 2:4
+- **Conjunctions:** in order that, so that, that, lest, ἵνα, εἰς τὸ.
+- **Example:** I say this in order that no one may delude you with plausible arguments (Colossians 2:4)
 
 ```mermaid
 bracket
@@ -147,15 +143,16 @@ Ac/Pur
   *Ac 1
   Pur 2
 1: I say this
-2: in order that no one may delude you with plausible arguments.
+2: in order that no one may delude you with plausible arguments
 ```
 
-### Conditional — `If/Th`
+### Conditional (If/Th)
 
-Like Action-Result, except that the action is only potential and the result depends on it.
+Like Action-Result except that the existence of the action is only potential and the result is contingent
+upon that action.
 
-- **Look for:** if … then, unless, provided that · εἰ, ἐάν, εἴτε
-- **Scripture:** Exodus 21:23
+- **Conjunctions:** if…then, provided that, except, unless, εἰ, ἐάν, εἴτε, ἆρα.
+- **Example:** if there is harm, then you shall pay life for life (Exodus 21:23)
 
 ```mermaid
 bracket
@@ -163,15 +160,15 @@ If/Th
   If  1
   *Th 2
 1: if there is harm,
-2: then you shall pay life for life.
+2: then you shall pay life for life
 ```
 
-### Temporal — `T`
+### Temporal (T)
 
-A statement and the time at which it holds or occurs.
+A statement and the occasion when it is true or can occur.
 
-- **Look for:** when, whenever, after, before, while · ὅταν, ὅτε, πρίν, ἕως
-- **Scripture:** Matthew 6:16
+- **Conjunctions:** when, whenever, after, before, ὅταν, ὅτε, πρίν.
+- **Example:** And when you fast, do not look gloomy (Matthew 6:16)
 
 ```mermaid
 bracket
@@ -179,15 +176,15 @@ T
   T  1
   *  2
 1: And when you fast,
-2: do not look gloomy.
+2: do not look gloomy
 ```
 
-### Locative — `L`
+### Locative (L)
 
-A statement and the place where it holds or occurs.
+A statement and the place where it is true or can occur.
 
-- **Look for:** where, wherever · ὅπου, οὗ
-- **Scripture:** Ruth 1:16
+- **Conjunctions:** where, wherever, ὅπου.
+- **Example:** For where you go I will go (Ruth 1:16)
 
 ```mermaid
 bracket
@@ -195,21 +192,20 @@ L
   L  1
   *  2
 1: For where you go
-2: I will go.
+2: I will go
 ```
 
 ---
 
-## Support by restatement
+## Support by Restatement
 
-A supporting proposition that says the same thing again, from another angle.
+### Action-Manner (Ac/Mn)
 
-### Action-Manner — `Ac/Mn`
+An action and a statement indicating the way or manner that action is carried out. This relationship can
+also be used to indicate means.
 
-An action and a statement of the way it is carried out. Also used for means.
-
-- **Look for:** by, in that, through, participles · participles, οὕτως
-- **Scripture:** Acts 14:17
+- **Conjunctions:** in that, by, participles.
+- **Example:** he did good by giving you rains from heaven and fruitful seasons (Acts 14:17)
 
 ```mermaid
 bracket
@@ -220,12 +216,12 @@ Ac/Mn
 2: by giving you rains from heaven and fruitful seasons
 ```
 
-### Comparison — `Cf`
+### Comparison (Cf)
 
-An action clarified by showing what it is like.
+An action and a statement that clarifies that action by showing what it is like.
 
-- **Look for:** as, just as, like, even as · ὡς, καθώς, ὥσπερ, καθάπερ
-- **Scripture:** 1 Corinthians 11:1
+- **Conjunctions:** even as, as...so, like, just as, ὡς, καθώς.
+- **Example:** Be imitators of me, as I am of Christ (1Co 11:1)
 
 ```mermaid
 bracket
@@ -233,15 +229,16 @@ Cf
   *  1
   Cf 2
 1: Be imitators of me,
-2: as I am of Christ.
+2: as I am of Christ
 ```
 
-### Negative-Positive — `-/+`
+### Negative-Positive (-/+)
 
-Two statements, one denied so that the other stands out. This is also the shape of any contrasting pair.
+Two statements, one of which is denied so that the other is enforced. This is also the relationship
+implicit in contrasting statements.
 
-- **Look for:** not … but, rather · ἀλλά, οὐ … ἀλλά
-- **Scripture:** Ephesians 5:17
+- **Conjunctions:** not…but, ἀλλά.
+- **Example:** do not be foolish, but understand what the will of the Lord is (Ephesians 5:17)
 
 ```mermaid
 bracket
@@ -249,54 +246,54 @@ Neg/Pos
   -  1
   *+ 2
 1: do not be foolish,
-2: but understand what the will of the Lord is.
+2: but understand what the will of the Lord is
 ```
 
-### Idea-Explanation — `Id/Exp`
+### Idea-Explanation (Id/Exp)
 
-A statement and a second one that clarifies its meaning. The explanation may expound the whole idea or a
-single word of it.
+The relationship between an original statement and one clarifying its meaning. The clarifying proposition
+may expound on only one word of the associated arc or its entirety.
 
-- **Look for:** that is, in other words, namely · ὅτι, γάρ, ἵνα
-- **Scripture:** Romans 4:7–8
+- **Conjunctions:** that is, in other words, ὅτι, γάρ, ἵνα.
+- **Example:** Blessed are those whose lawless deeds are forgiven, and whose sins are covered; blessed is
+  the man against whom the Lord will not count his sin (Romans 4:7-8)
 
 ```mermaid
 bracket
 Id/Exp
   *Id 1
   Exp 2
-1: Blessed are those whose lawless deeds are forgiven,
-2: and whose sins are covered.
+1: Blessed are those whose lawless deeds are forgiven, and whose sins are covered;
+2: blessed is the man against whom the Lord will not count his sin
 ```
 
-### Question-Answer — `Q/A`
+### Question-Answer (Q/A)
 
-A question and its answer.
+The statement of a question and the answer to that question.
 
-- **Look for:** a question mark · εἰ, τίς, πόθεν
-- **Scripture:** Romans 4:3
+- **Conjunctions:** question mark.
+- **Example:** what does the Scripture say? Abraham believed God, and it was counted to him as
+  righteousness (Romans 4:3)
 
 ```mermaid
 bracket
 Q/A
   Q  1
   *A 2
-1: What does the Scripture say?
-2: Abraham believed God, and it was counted to him as righteousness.
+1: what does the Scripture say?
+2: Abraham believed God, and it was counted to him as righteousness
 ```
 
 ---
 
-## Support by contrary statement
+## Support by Contrary Statement
 
-A supporting proposition that cuts against the main one, and in doing so strengthens it.
+### Concessive (Csv)
 
-### Concessive — `Csv`
+A main clause that stands despite a contrary statement.
 
-A main clause that stands despite something that might have overturned it.
-
-- **Look for:** although, though, yet, nevertheless, however · δέ, πλήν, καίπερ, καίτοι
-- **Scripture:** 2 Peter 1:12
+- **Conjunctions:** although, though, yet, nevertheless, but, however, δέ, πλήν.
+- **Example:** I intend always to remind you of these qualities, though you know them (2 Peter 1:12)
 
 ```mermaid
 bracket
@@ -304,22 +301,23 @@ Csv
   *   1
   Csv 2
 1: I intend always to remind you of these qualities,
-2: though you know them.
+2: though you know them
 ```
 
-### Situation-Response — `Sit/R`
+### Situation-Response (Sit/R)
 
-A situation and a response to it that is surprising or counter-intuitive.
+A situation and its surprising or counter-intuitive response.
 
-- **Look for:** and · καί
-- **Scripture:** Matthew 23:37
+- **Conjunctions:** and.
+- **Example:** How often would I have gathered your children together as a hen gathers her brood under her
+  wings, and you were not willing! (Matthew 23:37)
 
 ```mermaid
 bracket
 Sit/R
   Sit 1
   *R  2
-1: How often would I have gathered your children together,
+1: How often would I have gathered your children together as a hen gathers her brood under her wings,
 2: and you were not willing!
 ```
 
@@ -330,5 +328,7 @@ Sit/R
 In a `bracket` diagram the keyword opens the relationship and the children carry the arm labels. `Inf` is
 the ASCII spelling of `∴` and `Neg/Pos` of `-/+`; a leading `*` marks the main point.
 
-Full syntax: [Colossians 1:21–23 worked example][[Colossians 1_21-23]].
-Conjunctions: [English](English conjunctions.md) · [Greek](Greek conjunctions.md).
+Conjunction lists: [English](English conjunctions.md) · [Greek](Greek conjunctions.md).
+Practice sentences: [example sentences](Example sentences.md).
+
+> Biblearc: helping to spread a passion for the glory of God through the careful study of His Word.

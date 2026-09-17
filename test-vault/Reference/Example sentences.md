@@ -1,51 +1,53 @@
-# One everyday sentence for each relationship
+# Logical relationship example sentences
 
-A practice set: eighteen ordinary sentences, one per relationship, for recognising the shapes away from
-Scripture. Biblearc's own set, on a birthday-party theme, is in
-`documents/Logicalrelationshipexamplesentencesnewlogo.pdf`; these are written fresh so the page can be
-shared, and they follow the same idea.
+*for Arcing and Bracketing*
 
-Theme: moving house.
+Converted from Biblearc's sheet (`documents/Logicalrelationshipexamplesentencesnewlogo.pdf`), sentences
+as written there.
 
-## Coordinate
+**Theme: a child birthday party**
 
-| Relationship | Sentence |
-|---|---|
-| Series `S` | We packed the kitchen, labelled the boxes and stacked them by the door. |
-| Progression `P` | First we emptied the shelves, then we took them apart, and finally we carried them down. |
-| Alternative `A` | Do you want to drive the van, or shall I? |
-
-## Support by distinct statement
+## COORDINATE
 
 | Relationship | Sentence |
 |---|---|
-| Ground `G` | Start with the books, because they will take longest. |
-| Inference `∴` | The van arrives at eight, so we should be finished tonight. |
-| Bilateral `BL` | We cannot fit the piano. The doorway is too narrow. It will have to go through the window. |
-| Action-Result `Ac/Res` | I stacked the boxes too high, so that the whole tower came down. |
-| Action-Purpose `Ac/Pur` | I labelled every box in order that we could find the kettle first. |
-| Conditional `If/Th` | If it rains tomorrow, then we will move the boxes under the porch. |
-| Temporal `T` | When the van is loaded, we will hand back the keys. |
-| Locative `L` | Put the fragile boxes where nothing can fall on them. |
+| Series | At the party, we sang Happy Birthday, played games and ate cake. |
+| Progression | First put on the blindfold, then spin around 5 times, and finally swing at the piñata. |
+| Alternative | Do you want to open your presents or play a game? |
 
-## Support by restatement
+## SUBORDINATE
+
+### Support by Restatement
 
 | Relationship | Sentence |
 |---|---|
-| Action-Manner `Ac/Mn` | We emptied the loft by passing everything down the ladder. |
-| Comparison `Cf` | Pack the glasses as you packed the plates. |
-| Negative-Positive `-/+` | Do not lift it alone, but wait for me to take the other end. |
-| Idea-Explanation `Id/Exp` | The van is loaded; that is, everything except the garden chairs is aboard. |
-| Question-Answer `Q/A` | What goes in the van last? The kettle, so that it comes out first. |
+| Action-Manner | He blew out the candles by spitting all over the cake. |
+| Comparison | You want to do a ninja theme just like you did last year? |
+| Negative-Positive | I don't like the socks from grandma, but my new toy truck is awesome. |
+| Idea-Explanation | Joseph is turning thirteen today; he is now a young man. |
+| Question-Answer | What time is it now? It is time to eat the cake! |
 
-## Support by contrary statement
+### Support by Distinct Statement
 
 | Relationship | Sentence |
 |---|---|
-| Concessive `Csv` | We finished before dark, although we started two hours late. |
-| Situation-Response `Sit/R` | I offered to carry the heaviest box, and she laughed at me. |
+| Ground | Can we put on a video because 25 children in our house is driving me insane. |
+| Inference | You are my best friend, so you have to come to my party! |
+| Bilateral | We should invite everyone. It's his 10th birthday! Let's do something bigger this year. |
+| Action-Result | I ate seven cookies and now I regret it. |
+| Action-Purpose | Let's buy a gift together so we can get him something bigger. |
+| Conditional | If you want, we can celebrate your birthday at the park. |
+| Temporal | When I say go, we will lift her up on her chair eight times. |
+| Locative | Try to pin the tail on the donkey...where donkeys typically have tails. |
 
-## Diagramming a few of them
+### Support by Contrary Statement
+
+| Relationship | Sentence |
+|---|---|
+| Concessive | Even though it is not their birthday, I also got small gifts for your siblings. |
+| Situation-Response | Her dad told her she could open up her presents and she started to cry. |
+
+## Three of them bracketed
 
 ```mermaid
 bracket
@@ -56,9 +58,9 @@ P
   2
   3
 
-1: First we emptied the shelves,
-2: then we took them apart,
-3: and finally we carried them down.
+1: First put on the blindfold,
+2: then spin around 5 times,
+3: and finally swing at the piñata.
 ```
 
 ```mermaid
@@ -69,20 +71,20 @@ G
   *  1
   G  2
 
-1: Start with the books,
-2: because they will take longest.
+1: Can we put on a video
+2: because 25 children in our house is driving me insane.
 ```
 
 ```mermaid
 bracket
 columns Sentence
 
-Neg/Pos
-  -  1
-  *+ 2
+Sit/R
+  Sit 1
+  *R  2
 
-1: Do not lift it alone,
-2: but wait for me to take the other end.
+1: Her dad told her she could open up her presents
+2: and she started to cry.
 ```
 
 Back to [the reference index](Bracketing reference.md) or [the 18 relationships](The 18 logical relationships.md).
