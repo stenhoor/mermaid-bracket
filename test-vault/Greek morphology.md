@@ -66,8 +66,13 @@ be a conjunction or an adverb. Hover a tagged word to see its lemma and gloss.
 
 ## Vocabulary of a passage
 
-Run **Create Greek glossary** with the passage selected to append a table like this one. Layout and
-columns are set under Settings → Mermaid Bracket → Greek lookup.
+Two commands, both working on the selection or the whole note:
+
+- **Create Greek glossary** — every lemma, alphabetical.
+- **Create Greek glossary by frequency** — commonest first, with conjunctions and the definite article
+  left out, so the list starts with the words worth learning.
+
+Layout and columns are set under Settings → Mermaid Bracket → Greek lookup.
 
 ## Making it permanent
 

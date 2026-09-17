@@ -77,8 +77,10 @@ it. When the candidate parses disagree, only the features they all share are wri
 `πάντα^A---------` (an adjective, case and number undecidable) and `καί`, which may be a conjunction or an
 adverb, is left alone for you to decide. About two thirds of running words are tagged outright.
 
-Hovering a tagged word also shows its dictionary form and a short gloss, and the command **Create Greek
-glossary** lists the vocabulary of a note or selection as a table or a bullet list. Everything in this
+Hovering a tagged word also shows its dictionary form and a short gloss, and two commands list the vocabulary of a
+note or selection: **Create Greek glossary**, alphabetical by lemma, and **Create Greek glossary by
+frequency**, commonest first and leaving out conjunctions and the definite article. Both render as a table
+or a bullet list. Everything in this
 paragraph has its own switch under Settings → Mermaid Bracket → Greek lookup, including whether glosses appear
 on hover and which columns the glossary includes.
 

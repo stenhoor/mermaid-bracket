@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoTagGreek, buildGlossary, greekIndex, renderGlossary, wordInfo } from '../src/greek.js';
+import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, wordInfo } from '../src/greek.js';
 
 const index = greekIndex();
 const JOHN = 'Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.';
@@ -78,5 +78,21 @@ describe('buildGlossary and renderGlossary', () => {
     expect(list).toMatch(/^- \*\*/m);
     expect(list).toContain('×3');
     expect(renderGlossary([], { style: 'table', includeCounts: true, includeForms: true })).toBe('');
+  });
+
+  it('can sort by frequency and leave out conjunctions and the article', () => {
+    const freq = buildGlossary(JOHN, index, { sort: 'frequency', excludePos: FUNCTION_WORD_POS });
+    const counts = freq.map((r) => r.count);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+    expect(freq[0]!.count).toBeGreaterThanOrEqual(3);
+    // ὁ is an article and καί a conjunction: both are dropped, by the lemma's own part of speech.
+    expect(freq.map((r) => r.lemma)).not.toContain('ὁ');
+    expect(freq.map((r) => r.lemma)).not.toContain('καί');
+    // Content words survive, and the alphabetical glossary still keeps everything.
+    expect(freq.map((r) => r.lemma)).toContain('λόγος');
+    const all = buildGlossary(JOHN, index);
+    expect(all.map((r) => r.lemma)).toContain('ὁ');
+    expect(all.find((r) => r.lemma === 'ὁ')!.pos).toBe('RA');
+    expect(all.find((r) => r.lemma === 'καί')!.pos).toBe('C-');
   });
 });

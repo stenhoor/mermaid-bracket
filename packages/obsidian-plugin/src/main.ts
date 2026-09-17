@@ -4,7 +4,8 @@ import { bracketDiagram, createInlineFormatter, sentenceDiagram, setBracketDefau
 import { createObsidianFormatter } from './obsidian-formatter.js';
 import { registerExportMenu } from './export-menu.js';
 import { bakeMorphTags, tagMorphInElement } from './markdown-morph.js';
-import { autoTagGreek, buildGlossary, greekIndex, renderGlossary, wordInfo } from './greek.js';
+import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, wordInfo } from './greek.js';
+import type { GlossaryOptions } from './greek.js';
 import { DEFAULT_SETTINGS, MermaidBracketSettingTab } from './settings.js';
 import type { MermaidBracketSettings } from './settings.js';
 
@@ -61,23 +62,17 @@ export default class MermaidBracketPlugin extends Plugin {
       checkCallback: (checking: boolean) => {
         if (!this.settings.greekLookup || !this.settings.greekGlossary) return false;
         if (checking) return true;
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return false;
-        const editor = view.editor;
-        const rows = buildGlossary(editor.getSelection() || editor.getValue(), greekIndex());
-        if (rows.length === 0) {
-          new Notice('No Greek words found');
-          return true;
-        }
-        const table = renderGlossary(rows, {
-          style: this.settings.glossaryStyle,
-          includeCounts: this.settings.glossaryCounts,
-          includeForms: this.settings.glossaryForms,
-        });
-        const cursor = editor.getCursor('to');
-        editor.replaceRange(`\n\n${table}\n`, { line: cursor.line, ch: editor.getLine(cursor.line).length });
-        new Notice(`Glossary: ${rows.length} lemma${rows.length === 1 ? '' : 's'}`);
-        return true;
+        return this.insertGlossary({});
+      },
+    });
+
+    this.addCommand({
+      id: 'greek-glossary-frequency',
+      name: 'Create Greek glossary by frequency',
+      checkCallback: (checking: boolean) => {
+        if (!this.settings.greekLookup || !this.settings.greekGlossary) return false;
+        if (checking) return true;
+        return this.insertGlossary({ sort: 'frequency', excludePos: FUNCTION_WORD_POS });
       },
     });
 
@@ -110,6 +105,27 @@ export default class MermaidBracketPlugin extends Plugin {
     this.applyGreekProvider();
     this.applyDefaults();
     this.rerenderOpenViews();
+  }
+
+  /** Build a glossary of the selection or the note and insert it after the cursor's line. */
+  private insertGlossary(opts: GlossaryOptions): boolean {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return false;
+    const editor = view.editor;
+    const rows = buildGlossary(editor.getSelection() || editor.getValue(), greekIndex(), opts);
+    if (rows.length === 0) {
+      new Notice('No Greek words found');
+      return true;
+    }
+    const table = renderGlossary(rows, {
+      style: this.settings.glossaryStyle,
+      includeCounts: this.settings.glossaryCounts,
+      includeForms: this.settings.glossaryForms,
+    });
+    const cursor = editor.getCursor('to');
+    editor.replaceRange(`\n\n${table}\n`, { line: cursor.line, ch: editor.getLine(cursor.line).length });
+    new Notice(`Glossary: ${rows.length} lemma${rows.length === 1 ? '' : 's'}`);
+    return true;
   }
 
   /** The hover lexicon is only consulted when both toggles are on. */

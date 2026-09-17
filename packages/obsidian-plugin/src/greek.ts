@@ -96,12 +96,22 @@ export interface GlossaryRow {
   gloss: string;
   count: number;
   forms: string[];
+  /** The part of speech this lemma is used as most often in the corpus, e.g. "C-" or "RA". */
+  pos: string;
   /** True when the forms could belong to more than one lemma. */
   uncertain: boolean;
 }
 
+export interface GlossaryOptions {
+  /** Alphabetical by lemma (the default) or commonest first. */
+  sort?: 'lemma' | 'frequency';
+  /** Parts of speech to leave out, e.g. ['C-', 'RA'] for conjunctions and the article. */
+  excludePos?: readonly string[];
+}
+
 /** Collect the vocabulary of a passage: one row per lemma, with its gloss and frequency. */
-export function buildGlossary(markdown: string, index: GreekIndex): GlossaryRow[] {
+export function buildGlossary(markdown: string, index: GreekIndex, opts: GlossaryOptions = {}): GlossaryRow[] {
+  const exclude = new Set(opts.excludePos ?? []);
   const byLemma = new Map<string, GlossaryRow>();
   mapOutsideCode(markdown, (chunk) => {
     for (const m of chunk.matchAll(GREEK_WORD_RE)) {
@@ -109,11 +119,20 @@ export function buildGlossary(markdown: string, index: GreekIndex): GlossaryRow[
       const found = lookupWord(index, word);
       if (!found?.lemmas.length) continue;
       const lemma = found.lemmas[0]!;
+      const pos = found.lemmaPos[0] ?? '';
+      if (exclude.has(pos)) continue;
       let row = byLemma.get(lemma);
       if (!row) {
         byLemma.set(
           lemma,
-          (row = { lemma, gloss: found.glosses[0] ?? '', count: 0, forms: [], uncertain: found.lemmas.length > 1 }),
+          (row = {
+            lemma,
+            gloss: found.glosses[0] ?? '',
+            count: 0,
+            forms: [],
+            pos,
+            uncertain: found.lemmas.length > 1,
+          }),
         );
       }
       row.count++;
@@ -122,8 +141,14 @@ export function buildGlossary(markdown: string, index: GreekIndex): GlossaryRow[
     }
     return chunk;
   });
-  return [...byLemma.values()].sort((a, b) => a.lemma.localeCompare(b.lemma, 'el'));
+  const rows = [...byLemma.values()];
+  return opts.sort === 'frequency'
+    ? rows.sort((a, b) => b.count - a.count || a.lemma.localeCompare(b.lemma, 'el'))
+    : rows.sort((a, b) => a.lemma.localeCompare(b.lemma, 'el'));
 }
+
+/** Conjunctions and the definite article: what the frequency glossary leaves out. */
+export const FUNCTION_WORD_POS = ['C-', 'RA'] as const;
 
 export interface GlossaryFormat {
   style: 'table' | 'list';

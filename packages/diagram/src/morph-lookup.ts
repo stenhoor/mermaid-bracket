@@ -14,6 +14,8 @@ export interface GreekIndex {
   codes: string[];
   lemmas: string[];
   glosses: string[];
+  /** The part of speech each lemma is used as most often in the corpus, aligned to `lemmas`. */
+  lemmaPos: string[];
   /** Forms exactly as the corpus writes them. Consulted first, because it is the more precise key. */
   forms: Map<string, { codes: number[]; lemmas: number[] }>;
   /** Normalized spellings, consulted only when the exact spelling is unknown. */
@@ -23,6 +25,8 @@ export interface GreekIndex {
 }
 
 export interface FormInfo {
+  /** The dominant part of speech of each matched lemma, aligned to `lemmas`. */
+  lemmaPos?: string[];
   /** The key that matched, which may differ from what was looked up. */
   form: string;
   /** How the match was found: the exact spelling, the normalized one, or after folding accents. */
@@ -35,7 +39,8 @@ export interface FormInfo {
 const SECTION = '\n===\n';
 
 export function decodeGreekIndex(blob: string): GreekIndex {
-  const [codesRaw = '', lemmasRaw = '', glossesRaw = '', formsRaw = '', normalRaw = ''] = blob.split(SECTION);
+  const [codesRaw = '', lemmasRaw = '', glossesRaw = '', formsRaw = '', normalRaw = '', posRaw = ''] =
+    blob.split(SECTION);
   const table = (raw: string): Map<string, { codes: number[]; lemmas: number[] }> => {
     const map = new Map<string, { codes: number[]; lemmas: number[] }>();
     for (const line of raw ? raw.split('\n') : []) {
@@ -59,6 +64,7 @@ export function decodeGreekIndex(blob: string): GreekIndex {
     codes: codesRaw ? codesRaw.split(' ') : [],
     lemmas: lemmasRaw ? lemmasRaw.split(' ') : [],
     glosses: glossesRaw.split('\n'),
+    lemmaPos: posRaw ? posRaw.split(' ') : [],
     forms: table(formsRaw),
     normalized: table(normalRaw),
   };
@@ -83,6 +89,7 @@ export function lookupForm(index: GreekIndex, word: string): FormInfo | null {
       via,
       codes: entry.codes.map((i) => index.codes[i] ?? ''),
       lemmas,
+      lemmaPos: entry.lemmas.map((i) => index.lemmaPos[i] ?? ''),
       glosses: entry.lemmas.map((i) => index.glosses[i] ?? '').filter(Boolean),
     };
   };
@@ -156,6 +163,8 @@ export interface WordInfo {
   form: string;
   agreed: AgreedCode | null;
   lemmas: string[];
+  /** Dominant part of speech of each lemma, e.g. "C-" for καί, "RA" for ὁ. */
+  lemmaPos: string[];
   glosses: string[];
   candidates: string[];
   via: FormInfo['via'];
@@ -168,6 +177,7 @@ export function lookupWord(index: GreekIndex, word: string): WordInfo | null {
     form: info.form,
     agreed: agreedCode(info.codes),
     lemmas: info.lemmas,
+    lemmaPos: info.lemmaPos ?? [],
     glosses: info.glosses,
     candidates: info.codes,
     via: info.via,

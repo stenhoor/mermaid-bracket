@@ -12,6 +12,7 @@
  *   2  brief glosses, newline separated       (aligned to the lemma table; "" when unknown)
  *   3  surface forms, one per line: form|codes|lemmas (indices in base 36, comma separated)
  *   4  normalized forms, same shape
+ *   5  the dominant part of speech of each lemma, space separated, aligned to the lemma table
  *
  * The two form tables are kept apart on purpose: normalizing collapses spellings that the corpus
  * distinguishes, so a lookup tries the exact spelling first and only then the normalized table.
@@ -45,6 +46,7 @@ for (const m of xml.matchAll(/<entry n="([^"|]+)\s*\|[^"]*">\s*<orth>.*?<\/orth>
 // ---- corpus: form -> parses and lemmas --------------------------------------------------------
 const codes = new Map(); // code -> index
 const lemmas = new Map(); // lemma -> index
+const lemmaPos = new Map(); // lemma -> Map(pos -> count)
 const surface = new Map(); // form as written -> { codes:Set, lemmas:Set }
 const normal = new Map(); // normalized form -> { codes:Set, lemmas:Set }
 const idx = (map, key) => {
@@ -71,6 +73,9 @@ for (const file of readdirSync(corpusDir).filter((f) => f.endsWith('-morphgnt.tx
     words++;
     const codeIdx = idx(codes, p[1] + p[2]);
     const lemmaIdx = idx(lemmas, p[6]);
+    let posCounts = lemmaPos.get(p[6]);
+    if (!posCounts) lemmaPos.set(p[6], (posCounts = new Map()));
+    posCounts.set(p[1], (posCounts.get(p[1]) ?? 0) + 1);
     add(surface, p[4], codeIdx, lemmaIdx); // form as written, punctuation stripped
     add(normal, p[5], codeIdx, lemmaIdx); // normalized form
   }
@@ -90,12 +95,19 @@ const encode = (map) =>
 for (const key of [...normal.keys()]) if (surface.has(key)) normal.delete(key);
 
 const SEP = '\n===\n';
+// The part of speech a lemma is used as most often, so a glossary can leave out, say, articles.
+const posList = lemmaList.map((l) => {
+  const counts = [...(lemmaPos.get(l) ?? new Map())].sort((a, b) => b[1] - a[1]);
+  return counts.length ? counts[0][0] : '--';
+});
+
 const blob = [
   [...codes.keys()].join(' '),
   lemmaList.join(' '),
   glossList.join('\n'),
   encode(surface),
   encode(normal),
+  posList.join(' '),
 ].join(SEP);
 
 const outDir = 'packages/obsidian-plugin/src/data';
