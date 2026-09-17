@@ -42,6 +42,9 @@ Ac/Pur
 ```
 ````
 
+**Reference pages** for the method itself are in [`docs/reference/`](docs/reference/index.md): the eighteen
+relationships with a diagram each, and the English and Greek conjunction lists.
+
 Syntax reference and worked examples: `examples/Colossians_1_21-23.md` (bracket) and
 `examples/Sentence_Colossians_1_1-2.md` (sentence). Target renderings from Biblearc are the PDFs in
 `examples/`.
