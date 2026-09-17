@@ -74,6 +74,13 @@ Two commands, both working on the selection or the whole note:
 
 Layout and columns are set under Settings → Mermaid Bracket → Greek lookup.
 
+## Editing view
+
+`word^CODE` only renders in reading view. **Tag Greek morphology as HTML** writes the same information as
+`<span>` markup, which Obsidian renders in editing view as well, so the colours and the hover tooltip are
+there while you type. The markup is longer than a code, and the line under the cursor shows its raw source;
+**Remove Greek morphology tags** takes either form back to plain words.
+
 ## Making it permanent
 
 Run **Convert Greek morphology tags to HTML** from the command palette to replace the tags in this

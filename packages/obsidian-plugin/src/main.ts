@@ -4,7 +4,7 @@ import { bracketDiagram, createInlineFormatter, sentenceDiagram, setBracketDefau
 import { createObsidianFormatter } from './obsidian-formatter.js';
 import { registerExportMenu } from './export-menu.js';
 import { bakeMorphTags, tagMorphInElement } from './markdown-morph.js';
-import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, wordInfo } from './greek.js';
+import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, stripGreekTags, tagGreekAsHtml, wordInfo } from './greek.js';
 import type { GlossaryOptions } from './greek.js';
 import { DEFAULT_SETTINGS, MermaidBracketSettingTab } from './settings.js';
 import type { MermaidBracketSettings } from './settings.js';
@@ -53,6 +53,53 @@ export default class MermaidBracketPlugin extends Plugin {
             (left ? `; ${left} ambiguous left untagged` : ''),
         );
         return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'tag-greek-html',
+      name: 'Tag Greek morphology as HTML',
+      checkCallback: (checking: boolean) => {
+        if (!this.settings.greekLookup) return false;
+        if (checking) return true;
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        const editor = view.editor;
+        const selection = editor.getSelection();
+        const { text, tagged, partial, fromExistingTags, skipped } = tagGreekAsHtml(
+          selection || editor.getValue(),
+          greekIndex(),
+        );
+        const total = tagged + partial + fromExistingTags;
+        if (total === 0) {
+          new Notice('No Greek words could be tagged');
+          return true;
+        }
+        if (selection) editor.replaceSelection(text);
+        else editor.setValue(text);
+        const left = [...skipped.values()].reduce((a, b) => a + b, 0);
+        new Notice(
+          `Wrapped ${total} word${total === 1 ? '' : 's'} in HTML` +
+            (partial ? `, ${partial} partially parsed` : '') +
+            (left ? `; ${left} ambiguous left plain` : ''),
+        );
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: 'strip-greek-tags',
+      name: 'Remove Greek morphology tags',
+      editorCallback: (editor: Editor) => {
+        const selection = editor.getSelection();
+        const { text, removed } = stripGreekTags(selection || editor.getValue());
+        if (removed === 0) {
+          new Notice('No morphology tags found');
+          return;
+        }
+        if (selection) editor.replaceSelection(text);
+        else editor.setValue(text);
+        new Notice(`Removed ${removed} tag${removed === 1 ? '' : 's'}`);
       },
     });
 

@@ -70,6 +70,11 @@ behaviour can be switched off in the plugin settings. The command **Convert Gree
 rewrites the tags in the current note (or just the selection) as plain HTML spans, so the formatting survives
 export, publishing, or removing the plugin.
 
+**Two ways to carry a tag.** `word^CODE` is compact but only renders in reading view, and the codes clutter
+the text while you edit. **Tag Greek morphology as HTML** instead writes each word as a `<span>` with the same
+classes, so the formatting and the hover tooltip appear in editing view as well. **Remove Greek morphology
+tags** undoes either form.
+
 **You do not have to type the codes.** The plugin bundles the MorphGNT corpus and the Dodson lexicon, so
 the command **Tag Greek morphology automatically** looks each word up and writes the code for you. Matching is
 on the word itself, never on its position: a word is tagged only when the corpus attests a single parse for

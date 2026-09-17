@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, wordInfo } from '../src/greek.js';
+import { autoTagGreek, buildGlossary, FUNCTION_WORD_POS, greekIndex, renderGlossary, stripGreekTags, tagGreekAsHtml, wordInfo } from '../src/greek.js';
+import { setMorphInfoProvider } from '@mermaid-bracket/diagram';
 
 const index = greekIndex();
 const JOHN = 'Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.';
@@ -124,5 +125,55 @@ describe('buildGlossary and renderGlossary', () => {
     expect(text).toContain('subj  χάρις\n');
     expect(text).toContain('1: εἰρήνη ὑμῖν');
     expect(text).toContain('ἀγάπη^N-----NSF-');
+  });
+
+  it('writes HTML spans instead of codes, so editing view shows the formatting too', () => {
+    const { text, tagged, skipped } = tagGreekAsHtml('Ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεὸς ἦν.', index);
+    expect(text).toContain('<span class="gk gk-pos-noun gk-case-dative gk-number-singular gk-gender-feminine" data-morph="N-----DSF-" title="noun · dative · singular · feminine">ἀρχῇ</span>');
+    expect(text).toContain('>ἦν</span>');
+    expect(text).not.toContain('^N-----DSF-');
+    expect(tagged).toBeGreaterThan(4);
+    expect(skipped.has('καὶ')).toBe(true); // still never guesses
+    expect(text).toContain(', καὶ ');
+  });
+
+  it('honours a hand-written code, and never double-wraps or touches diagrams', () => {
+    const src = [
+      'λόγος^RA----NSM- and λόγος',
+      '<span class="gk gk-pos-noun" data-morph="N-----NSM-">λόγος</span>',
+      '```mermaid',
+      'sentence',
+      'subj λόγος',
+      '```',
+    ].join('\n');
+    const { text, fromExistingTags, tagged } = tagGreekAsHtml(src, index);
+    // The hand-written (deliberately wrong) code is kept, not replaced by the lookup.
+    expect(text).toContain('data-morph="RA----NSM-"');
+    expect(text.slice(0, text.indexOf('</span>'))).toContain('gk-pos-article');
+    expect(text).not.toContain('^RA----NSM-');
+    expect(fromExistingTags).toBe(1);
+    expect(tagged).toBe(1);
+    expect(text.split('\n')[1]).toBe('<span class="gk gk-pos-noun" data-morph="N-----NSM-">λόγος</span>');
+    expect(text.split('\n')[4]).toBe('subj λόγος');
+  });
+
+  it('adds lemma and gloss attributes when the lexicon provider is installed', () => {
+    setMorphInfoProvider((w) => wordInfo(w));
+    try {
+      const { text } = tagGreekAsHtml('λόγος', index);
+      expect(text).toContain('data-lemma="λόγος"');
+      expect(text).toContain('title="λόγος — a word, speech, divine utterance, analogy · noun · nominative · singular · masculine"');
+    } finally {
+      setMorphInfoProvider(null);
+    }
+  });
+
+  it('strips both kinds of tag back to plain text', () => {
+    const tagged = tagGreekAsHtml('Ἐν ἀρχῇ ἦν ὁ λόγος.', index).text;
+    const back = stripGreekTags(tagged);
+    expect(back.text).toBe('Ἐν ἀρχῇ ἦν ὁ λόγος.');
+    expect(back.removed).toBeGreaterThan(3);
+    expect(stripGreekTags('λόγος^N-----NSM- plain').text).toBe('λόγος plain');
+    expect(stripGreekTags('nothing here')).toEqual({ text: 'nothing here', removed: 0 });
   });
 });

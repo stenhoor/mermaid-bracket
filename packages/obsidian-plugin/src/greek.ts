@@ -5,7 +5,7 @@
  * single parse for it, or when the candidate parses agree on some features, in which case only the
  * agreed features are written. Anything else is left for you to tag by hand.
  */
-import { decodeGreekIndex, GREEK_WORD_RE, lookupWord, MORPH_CODE_RE } from '@mermaid-bracket/diagram';
+import { decodeGreekIndex, GREEK_WORD_RE, lookupWord, morphAttributes, MORPH_CODE_RE, parseMorph } from '@mermaid-bracket/diagram';
 import type { GreekIndex, MorphInfo, WordInfo } from '@mermaid-bracket/diagram';
 import { GREEK_DATA } from './data/greek-data.js';
 import { mapOutsideCode } from './markdown-morph.js';
@@ -89,6 +89,109 @@ export function autoTagGreek(markdown: string, index: GreekIndex, opts: AutoTagO
   });
 
   return { text, tagged, partial, skipped };
+}
+
+/** Words already wrapped in a span, and the tags themselves, must not be touched again. */
+const HTML_SPAN_RE = /<span\b[^>]*>[\s\S]*?<\/span>|<[^>]+>/g;
+
+export interface HtmlTagResult extends AutoTagResult {
+  /** Words that carried a hand-written ^CODE, which is honoured rather than looked up. */
+  fromExistingTags: number;
+}
+
+/**
+ * Write morphology straight into the note as HTML spans, so the formatting shows in editing view as
+ * well as reading view. A hand-written `^CODE` on a word wins over the lookup and is consumed.
+ * Fenced blocks, including diagrams, are left alone, as are words already inside a span.
+ */
+export function tagGreekAsHtml(markdown: string, index: GreekIndex, opts: AutoTagOptions = {}): HtmlTagResult {
+  const allowPartial = opts.allowPartial ?? true;
+  let tagged = 0;
+  let partial = 0;
+  let fromExistingTags = 0;
+  const skipped = new Map<string, number>();
+
+  const text = mapOutsideCode(markdown, (chunk) =>
+    // Keep existing markup intact: only the text between tags is considered.
+    splitKeepingMarkup(chunk).map((part) => (part.markup ? part.text : tagPlainText(part.text))).join(''),
+  );
+
+  function tagPlainText(chunk: string): string {
+    let out = '';
+    let last = 0;
+    for (const m of chunk.matchAll(GREEK_WORD_RE)) {
+      const word = m[0];
+      const start = m.index ?? 0;
+      out += chunk.slice(last, start);
+      last = start + word.length;
+
+      // A code written by hand takes precedence over the corpus.
+      const existing = MORPH_CODE_RE.exec(chunk.slice(last));
+      const handWritten = existing ? parseMorph(existing[1]!) : null;
+      if (handWritten) {
+        last += existing![0].length;
+        out += span(word, handWritten.code);
+        fromExistingTags++;
+        continue;
+      }
+
+      const found = lookupWord(index, word);
+      const agreed = found?.agreed;
+      if (!agreed || (!agreed.exact && !allowPartial)) {
+        skipped.set(word, (skipped.get(word) ?? 0) + 1);
+        out += word;
+        continue;
+      }
+      out += span(word, agreed.code);
+      if (agreed.exact) tagged++;
+      else partial++;
+    }
+    return out + chunk.slice(last);
+  }
+
+  return { text, tagged, partial, fromExistingTags, skipped };
+}
+
+/** One `<span>` carrying the classes, the code and the tooltip. */
+function span(word: string, code: string): string {
+  const morph = parseMorph(code);
+  if (!morph) return word;
+  const attrs = Object.entries(morphAttributes(word, morph))
+    .map(([k, v]) => `${k}="${v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"`)
+    .join(' ');
+  return `<span ${attrs}>${word}</span>`;
+}
+
+function splitKeepingMarkup(chunk: string): { text: string; markup: boolean }[] {
+  const parts: { text: string; markup: boolean }[] = [];
+  let last = 0;
+  HTML_SPAN_RE.lastIndex = 0;
+  for (const m of chunk.matchAll(HTML_SPAN_RE)) {
+    const start = m.index ?? 0;
+    if (start > last) parts.push({ text: chunk.slice(last, start), markup: false });
+    parts.push({ text: m[0], markup: true });
+    last = start + m[0].length;
+  }
+  parts.push({ text: chunk.slice(last), markup: false });
+  return parts;
+}
+
+/** Undo either form of tagging: unwrap morphology spans and drop `^CODE` tags. */
+export function stripGreekTags(markdown: string): { text: string; removed: number } {
+  let removed = 0;
+  const text = mapOutsideCode(markdown, (chunk) =>
+    chunk
+      .replace(/<span\b[^>]*\bdata-morph="[^"]*"[^>]*>([\s\S]*?)<\/span>/g, (_, inner: string) => {
+        removed++;
+        return inner;
+      })
+      .replace(new RegExp(MORPH_CODE_RE.source.replace(/^\^/, ''), 'g'), (match) => {
+        if (!parseMorph(match.slice(1))) return match;
+        removed++;
+        return '';
+      }),
+  );
+  return { text, removed };
 }
 
 export interface GlossaryRow {
