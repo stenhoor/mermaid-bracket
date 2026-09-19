@@ -1,110 +1,138 @@
 /*
- * Mermaid Bracket — sample morphology stylesheet
+ * Mermaid Bracket — Greek morphology stylesheet
  *
- * Copy this into <vault>/.obsidian/snippets/greek-morphology.css and enable it under
- * Settings → Appearance → CSS snippets. Delete the rules you do not want; nothing here is
- * applied by the plugin itself, which only emits the classes.
+ * Copy into <vault>/.obsidian/snippets/greek-morphology.css and enable it under
+ * Settings → Appearance → CSS snippets.
  *
- * Tag a word in a diagram with a MorphGNT code:  λόγος^N-----NSM-
- * That produces, in bracket cells a <span> and in sentence diagrams a <tspan>, carrying:
+ * Tag a word with a MorphGNT code (λόγος^N-----NSM-, or let the plugin do it) and it carries:
  *
  *   gk                          every tagged word
  *   gk-pos-…                    noun adjective verb adverb conjunction preposition
  *                               particle interjection article
  *                               personal demonstrative interrogative relative  ← the four pronouns,
  *                               which also all carry gk-pos-pronoun
- *   gk-person-…                 1 2 3   (verbs only: the corpus never marks person on a pronoun)
- *   data-lemma="…"              dictionary form, when the bundled lexicon is on; the only way to
- *                               tell a first, second or third person pronoun apart
  *   gk-tense-…                  present imperfect future aorist perfect pluperfect
  *   gk-voice-…                  active middle passive
  *   gk-mood-…                   indicative imperative subjunctive optative infinitive participle
  *   gk-case-…                   nominative genitive dative accusative vocative
  *   gk-number-…                 singular plural
  *   gk-gender-…                 masculine feminine neuter
+ *   gk-person-…                 1 2 3   (verbs only: the corpus never marks person on a pronoun)
  *   gk-degree-…                 comparative superlative
+ *   data-morph="N-----NSM-"     the exact code, for one-off selectors
+ *   data-lemma="…"              dictionary form, when the bundled lexicon is on
  *
- * plus data-morph="N-----NSM-" for exact targeting, and a hover tooltip naming the parse.
- * HTML cells take `color`; SVG words take `fill`. Rules below set both so they work in either.
+ * Words appear in two forms, and this file styles both:
+ *   · HTML  <span> — bracket-diagram cells, and note text tagged as HTML
+ *   · SVG   <tspan> — sentence diagrams, which are drawn as native text
+ *
+ * The two sets cannot interfere. Properties SVG text does not understand (background-color,
+ * text-shadow, display, transform) are inert there, and the SVG-only rules below are scoped to
+ * text/tspan elements so they never reach the HTML cells, which sit inside the diagram's own svg.
  */
 
-/* ---- Case, the most common thing to colour ---------------------------------------------- */
+/* ============================================================================================
+ * 1 · HTML: the visual formats
+ * ========================================================================================== */
+
+/* ---- Case --------------------------------------------------------------------------------- */
+.gk-case-genitive   { color: #008000; fill: #008000; }
+.gk-case-dative     { color: #600080; fill: #600080; }
+
+/* ---- Part of speech ----------------------------------------------------------------------- */
+.gk-pos-adjective   { text-shadow: #ffcc00 1px 0 5px; }
+.gk-pos-adverb      { background-color: #e8e8e8; }
+.gk-pos-pronoun     { color: #273ff5; fill: #273ff5; }
+.gk-pos-relative    { font-weight: bold; }
+.gk-pos-conjunction { color: #b30000; fill: #b30000; font-weight: bold; }
+.gk-pos-preposition { color: #5900b3; fill: #5900b3; font-weight: bold; }
+
+/* ---- Tense, as a background on finite and non-finite verbs alike -------------------------- */
+.gk-pos-verb.gk-tense-present    { background-color: #b3ffb3; } /* green */
+.gk-pos-verb.gk-tense-imperfect  { background-color: #ffb3b3; } /* red */
+.gk-pos-verb.gk-tense-future     { background-color: #b3d9ff; } /* blue */
+.gk-pos-verb.gk-tense-aorist     { background-color: #ffd9b3; } /* orange */
+.gk-pos-verb.gk-tense-perfect    { background-color: #ecb3ff; } /* purple */
+.gk-pos-verb.gk-tense-pluperfect { background-color: #d24dff; } /* dark purple */
+
+/* ---- Voice -------------------------------------------------------------------------------- */
+/* Note: the voices are active, middle and passive. There is no "present" voice; that is a tense,
+   so a .gk-voice-present rule would never match anything. */
+.gk-voice-active  { font-style: normal; }
+.gk-voice-middle  { display: inline-block; transform: skewX(10deg); }
+.gk-voice-passive { font-style: italic; }
+
+/* ---- Mood, on the underline ---------------------------------------------------------------- */
+.gk-mood-participle   { text-decoration-line: underline; }
+.gk-mood-infinitive   { text-decoration-line: underline; text-decoration-style: double; }
+.gk-mood-imperative   { text-decoration-line: underline; text-decoration-thickness: 3px; text-decoration-color: #ff0000; }
+.gk-mood-subjunctive  { text-decoration-line: underline; text-decoration-style: wavy; }
+.gk-mood-optative     { text-decoration-line: underline; text-decoration-style: dotted; }
+
+/* ============================================================================================
+ * 2 · SVG: the same visuals for sentence diagrams
+ *
+ * Only the rules above that SVG text cannot honour are repeated here. Colour already works in
+ * both, because each colour rule sets `fill` beside `color`; so do font-weight, font-style and
+ * text-decoration. What needs translating:
+ *
+ *   background-color  →  a stroke halo painted behind the glyphs (paint-order: stroke fill)
+ *   text-shadow       →  filter: drop-shadow()
+ *   transform: skewX  →  font-style: oblique <angle>
+ *   display           →  nothing; it has no meaning for SVG text
+ * ========================================================================================== */
+
+text.gk-pos-adjective,
+tspan.gk-pos-adjective { filter: drop-shadow(1px 0 3px #ffcc00); }
+
+text.gk-pos-adverb,
+tspan.gk-pos-adverb { paint-order: stroke fill; stroke: #e8e8e8; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-present,
+tspan.gk-pos-verb.gk-tense-present { paint-order: stroke fill; stroke: #b3ffb3; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-imperfect,
+tspan.gk-pos-verb.gk-tense-imperfect { paint-order: stroke fill; stroke: #ffb3b3; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-future,
+tspan.gk-pos-verb.gk-tense-future { paint-order: stroke fill; stroke: #b3d9ff; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-aorist,
+tspan.gk-pos-verb.gk-tense-aorist { paint-order: stroke fill; stroke: #ffd9b3; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-perfect,
+tspan.gk-pos-verb.gk-tense-perfect { paint-order: stroke fill; stroke: #ecb3ff; stroke-width: 7px; stroke-linejoin: round; }
+
+text.gk-pos-verb.gk-tense-pluperfect,
+tspan.gk-pos-verb.gk-tense-pluperfect { paint-order: stroke fill; stroke: #d24dff; stroke-width: 7px; stroke-linejoin: round; }
+
+/* The skew: SVG text cannot be transformed per word, but an oblique angle gives the same lean. */
+text.gk-voice-middle,
+tspan.gk-voice-middle { font-style: oblique 12deg; }
+
+/* The halo follows the shape of the letters rather than forming a rectangle, so it reads as a
+   highlighter mark. Raise stroke-width for more padding; much above 8px and neighbouring words
+   start to touch. */
+
+/* ============================================================================================
+ * 3 · Spare parts, off by default
+ * ========================================================================================== */
+
+/* Remaining cases, if you want the whole set coloured rather than genitive and dative only. */
+/*
 .gk-case-nominative { color: #1b6ac9; fill: #1b6ac9; }
-.gk-case-genitive   { color: #9a3fbf; fill: #9a3fbf; }
-.gk-case-dative     { color: #1f9d55; fill: #1f9d55; }
 .gk-case-accusative { color: #d1442f; fill: #d1442f; }
 .gk-case-vocative   { color: #c48a00; fill: #c48a00; }
-
-/* ---- Verb shape: bold, with the tense carried by the underline ------------------------- */
-.gk-pos-verb {
-  font-weight: 700;
-  text-decoration-line: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
-/* All six tenses the corpus uses. Colour groups them, style separates them. */
-.gk-tense-present    { text-decoration-color: #1f9d55; text-decoration-style: solid; }
-.gk-tense-imperfect  { text-decoration-color: #1f9d55; text-decoration-style: dashed; }
-.gk-tense-future     { text-decoration-color: #1b6ac9; text-decoration-style: dotted; }
-.gk-tense-aorist     { text-decoration-color: #d1442f; text-decoration-style: solid; }
-.gk-tense-perfect    { text-decoration-color: #9a3fbf; text-decoration-style: double; }
-.gk-tense-pluperfect { text-decoration-color: #9a3fbf; text-decoration-style: wavy; }
-
-/* ---- Mood, kept off the underline so it does not fight the tense ------------------------ */
-.gk-mood-participle { font-style: italic; font-weight: 400; }
-.gk-mood-infinitive { font-style: italic; }
-.gk-mood-imperative { font-weight: 800; letter-spacing: 0.03em; }
-.gk-mood-subjunctive,
-.gk-mood-optative   { font-style: italic; opacity: 0.85; }
-
-/* ---- Pronouns --------------------------------------------------------------------------- */
-/* Four pronoun classes, each with its own class and all sharing gk-pos-pronoun. They take case,
-   number and gender like nouns, so the case colours above already apply; these add to them.
-   The definite article is kept separate, since it is not a pronoun. */
-/* .gk-pos-pronoun { font-variant: small-caps; }   all pronouns at once */
-.gk-pos-relative      { font-style: italic; }
-.gk-pos-demonstrative { text-decoration-line: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
-.gk-pos-interrogative { font-weight: 600; }
-.gk-pos-personal      { font-style: normal; }
-
-/* The corpus does not mark person on pronouns, so first, second and third person cannot be read
-   from the code. The lemma distinguishes them, and it is available as data-lemma whenever the
-   bundled lexicon is switched on. */
-[data-lemma="ἐγώ"]    { border-bottom: 1px solid currentColor; }   /* I, we */
-[data-lemma="σύ"]     { border-bottom: 1px dashed currentColor; }  /* you */
-/* [data-lemma="αὐτός"], [data-lemma="ἑαυτοῦ"] { }                    he, she, it, they; -self */
-
-/* ---- Function words, played down so content words stand out ----------------------------- */
-.gk-pos-article,
-.gk-pos-particle { opacity: 0.6; }
-
-/* ---- Alternative: one colour per part of speech (comment out the case block above) ------ */
-/*
-.gk-pos-noun        { color: #1b6ac9; fill: #1b6ac9; }
-.gk-pos-verb        { color: #d1442f; fill: #d1442f; }
-.gk-pos-adjective   { color: #1f9d55; fill: #1f9d55; }
-.gk-pos-adverb      { color: #9a3fbf; fill: #9a3fbf; }
-.gk-pos-conjunction { color: #c48a00; fill: #c48a00; }
-.gk-pos-preposition { color: #00868b; fill: #00868b; }
 */
 
-/* ---- Target one exact parse ------------------------------------------------------------- */
-/* [data-morph="V-3AAI-P--"] { background: #fff3a0; } */
+/* Function words played down, so content words stand out. */
+/* .gk-pos-article, .gk-pos-particle { opacity: 0.6; } */
 
-/* ---- Highlighting a class of words in both media ---------------------------------------- */
-/* SVG text ignores background-color, so pair it with a stroke halo. One custom property keeps
-   the colour in one place; each medium ignores the declaration it does not understand. */
+/* Person on pronouns is not in the corpus; the lemma carries it. Works in HTML only. */
 /*
-.gk-case-vocative {
-  --hl: #fff3a0;
-  background-color: var(--hl);
-  paint-order: stroke fill;
-  stroke: var(--hl);
-  stroke-width: 6px;
-  stroke-linejoin: round;
-}
+[data-lemma="ἐγώ"] { border-bottom: 1px solid currentColor; }
+[data-lemma="σύ"]  { border-bottom: 1px dashed currentColor; }
 */
 
-/* Dark themes: the colours above are chosen to work on both, but you can override here. */
-.theme-dark .gk-pos-article,
-.theme-dark .gk-pos-particle { opacity: 0.7; }
+/* One exact parse. */
+/* [data-morph="V-3AAI-P--"] { outline: 1px solid #ff0000; } */
