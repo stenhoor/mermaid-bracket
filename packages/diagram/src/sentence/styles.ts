@@ -7,6 +7,7 @@ export function sentenceStyles(): string {
     --sentence-conj: #333333;
     --sentence-gen: #333333;
     --sentence-guide: #bbbbbb;
+    --sentence-label: #9a9a9a;
     --sentence-title: #222222;
     font-family: inherit;
   }
@@ -19,6 +20,7 @@ export function sentenceStyles(): string {
   .sd-gen { font-size: var(--sentence-font-size, 14px); fill: var(--sentence-gen); }
   .sd-eq { font-size: var(--sentence-font-size, 14px); fill: var(--sentence-ink); font-weight: 700; }
   .sd-conj { font-size: calc(var(--sentence-font-size, 14px) - 1px); fill: var(--sentence-conj); }
+  .sd-label { font-size: calc(var(--sentence-font-size, 14px) - 2px); fill: var(--sentence-label); }
   .sd-verse { font-size: calc(var(--sentence-font-size, 14px) - 2px); fill: var(--sentence-verse); }
   .sd-title { font-size: calc(var(--sentence-font-size, 14px) + 1px); font-weight: 700; font-style: italic; fill: var(--sentence-title); }
   `;

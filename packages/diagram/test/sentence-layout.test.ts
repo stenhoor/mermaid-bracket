@@ -156,3 +156,36 @@ describe('layoutSentence', () => {
     expect(find(l.prims, 'ἀδελφοῖς').x).toBeGreaterThan(eq.x);
   });
 });
+
+describe('participles and infinitives', () => {
+  it('drops a vertical connector, not a slant, and puts the label beneath', () => {
+    const doc = parseSentence('sentence\nverb Εὐχαριστοῦμεν\n  part προσευχόμενοι (Temporal)\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const head = find(l.prims, 'Εὐχαριστοῦμεν');
+    const part = find(l.prims, 'προσευχόμενοι');
+    const label = find(l.prims, '(Temporal)');
+    expect(part.y).toBeGreaterThan(head.y);
+    expect(label.y).toBeGreaterThan(part.y);
+    expect(label.cls).toBe('label');
+    // A vertical connector from the head line down to the participle's shelf.
+    const connector = lines(l.prims).find((x) => x.style === 'line' && x.x1 === x.x2 && x.y2 > x.y1)!;
+    expect(connector).toBeDefined();
+    // No slant is drawn for a verbal hanger.
+    expect(lines(l.prims).some((x) => x.style === 'line' && x.x1 !== x.x2 && x.y1 !== x.y2)).toBe(false);
+  });
+
+  it('marks an infinitive with a double bar and sets its subject before it', () => {
+    const doc = parseSentence('sentence\nverb Θέλω\n  inf εἰδέναι\n    subj ὑμᾶς\n    obj τὸ μυστήριον\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const subj = find(l.prims, 'ὑμᾶς');
+    const inf = find(l.prims, 'εἰδέναι');
+    const obj = find(l.prims, 'τὸ μυστήριον');
+    expect(subj.x).toBeLessThan(inf.x);
+    expect(inf.x).toBeLessThan(obj.x);
+    const markers = lines(l.prims).filter((x) => x.style === 'marker');
+    // Two bars for the infinitive marker, one for its object, plus the clause's own predicate marker.
+    expect(markers.length).toBeGreaterThanOrEqual(3);
+    const pair = markers.filter((m) => m.x1 > subj.x && m.x1 < inf.x);
+    expect(pair).toHaveLength(2);
+  });
+});

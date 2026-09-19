@@ -3,8 +3,11 @@
 export type SlotRole = 'subj' | 'verb' | 'obj' | 'obj2' | 'comp';
 export const SLOT_ORDER: readonly SlotRole[] = ['subj', 'verb', 'obj', 'obj2', 'comp'];
 
-/** Hanger kinds supported in phase 4a. (part, inf, stilt, sub, rel, voc, abs arrive in 4b.) */
-export type HangerKind = 'mod' | 'prep' | 'gen';
+/** Hanger kinds. (stilt, sub, rel, voc and abs are still to come.) */
+export type HangerKind = 'mod' | 'prep' | 'gen' | 'part' | 'inf';
+
+/** `part` and `inf` are verbal: they hang from a word but carry complements of their own. */
+export const VERBAL_KINDS: readonly HangerKind[] = ['part', 'inf'];
 
 import type { MorphSegment } from '../morph.js';
 
@@ -30,6 +33,11 @@ export interface HangerMember {
   /** Conjunction joining this member to the previous one in a fork (`+ καί`). */
   conj?: string;
   hangers: HangerGroup[];
+  /** Grey semantic label under a participle or infinitive, e.g. "Temporal". */
+  label?: string;
+  /** Complements of a participle or infinitive: its own object, second accusative, complement,
+   * and for an infinitive the accusative subject that stands before the marker. */
+  slots?: Partial<Record<SlotRole, Slot>>;
 }
 
 export interface HangerGroup {

@@ -54,7 +54,15 @@ so the `=` lines fork; `ὑμῖν` sits on the base line after the complement b
 | `word^V-3AAI-P--` | MorphGNT morphology tag on that word (any slot text) |
 | `config fontSize 16`, `config gutter 0`, `config useMaxWidth true` | options; `slant`, `pad`, `gap`, `clauseGap` also exist |
 
-Phase 4b will add `part`, `inf`, `stilt`, `sub`, `rel`, `voc`, `abs`.
+`part` and `inf` are in as well; see [Colossians 1:3–4a](Sentence_Colossians_1_3-4.md).
+
+| Line | Draws |
+|---|---|
+| `part T (Label)` | participle: a vertical connector down to its own shelf, with a grey label beneath |
+| `inf T (Label)` | infinitive: the double-bar marker then the verb; an indented `subj` sits before the marker |
+| `obj`, `obj2`, `comp` indented under either | the verbal's own complements, each behind its marker on that shelf |
+
+Still to come: `stilt`, `sub`, `rel`, `voc`, `abs` and compound clauses.
 
 ## With morphology tags
 

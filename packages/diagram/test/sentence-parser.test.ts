@@ -61,7 +61,7 @@ clause
     expect(() => parseSentence('sentence\nmod x\n')).toThrow(/line 2: `mod` must be indented under a word/);
     expect(() => parseSentence('sentence\nverb a\nverb b\n')).toThrow(/already set/);
     expect(() => parseSentence('sentence\nverb a\n  prep + καί b\n')).toThrow(/no previous `prep`/);
-    expect(() => parseSentence('sentence\nverb a\n  part b\n')).toThrow(/phase 4b/);
+    expect(() => parseSentence('sentence\nverb a\n  stilt\n')).toThrow(/not supported yet/);
     expect(() => parseSentence('sentence\nfoo a\n')).toThrow(SentenceParseError);
     expect(() => parseSentence('sentence\n')).toThrow(/no clause/);
   });
@@ -93,5 +93,35 @@ obj τοῖς
     expect(subj.members[0]!.word.segments![0]!.morph!.code).toBe('N-----NSF-');
     expect(subj.members[1]!.conj).toBe('καὶ');
     expect(doc.clauses[0]!.slots.verb!.members[0]!.word.text).toBe('ἦν');
+  });
+
+  it('parses participles and infinitives with their labels and complements', () => {
+    const doc = parseSentence(`sentence
+verb  Εὐχαριστοῦμεν
+  part  προσευχόμενοι (Temporal)
+    prep  περὶ ὑμῶν
+  part  ἀκούσαντες (Causal)
+    obj   τὴν πίστιν
+  inf   περιπατῆσαι (Purpose)
+    mod   ἀξίως
+`);
+    const hangers = doc.clauses[0]!.slots.verb!.members[0]!.hangers;
+    expect(hangers.map((h) => h.kind)).toEqual(['part', 'part', 'inf']);
+    const [first, second, third] = hangers as [typeof hangers[0], typeof hangers[0], typeof hangers[0]];
+    expect(first.members[0]!.word.text).toBe('προσευχόμενοι');
+    expect(first.members[0]!.label).toBe('Temporal');
+    expect(first.members[0]!.hangers[0]!.kind).toBe('prep');
+    expect(second.members[0]!.slots!.obj!.members[0]!.word.text).toBe('τὴν πίστιν');
+    expect(third.members[0]!.label).toBe('Purpose');
+    expect(third.members[0]!.hangers[0]!.members[0]!.word.text).toBe('ἀξίως');
+  });
+
+  it('gives an infinitive its accusative subject and refuses a verb inside one', () => {
+    const doc = parseSentence('sentence\nverb Θέλω\n  inf εἰδέναι\n    subj ὑμᾶς\n    obj τὸ μυστήριον\n');
+    const inf = doc.clauses[0]!.slots.verb!.members[0]!.hangers[0]!.members[0]!;
+    expect(inf.slots!.subj!.members[0]!.word.text).toBe('ὑμᾶς');
+    expect(inf.slots!.obj!.members[0]!.word.text).toBe('τὸ μυστήριον');
+    expect(() => parseSentence('sentence\nverb a\n  part b\n    verb c\n')).toThrow(/itself the verb/);
+    expect(() => parseSentence('sentence\nverb a\n  mod b\n    obj c\n')).toThrow(/only be nested under/);
   });
 });

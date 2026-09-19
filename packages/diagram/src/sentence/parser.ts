@@ -5,15 +5,19 @@ import type { ApposMember, Clause, HangerGroup, HangerKind, HangerMember, Senten
 const KEYWORD_RE = /^\s*sentence\s*$/;
 const CONFIG_RE = /^\s*config\s+([A-Za-z][\w.]*)\s+(.+?)\s*$/;
 const LINE_RE = /^(\s*)(\S+)(?:\s+(.*?))?\s*$/;
-const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen']);
+const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen', 'part', 'inf']);
 const SLOT_ROLES = new Set<string>(SLOT_ORDER);
-const PHASE_4B = new Set(['part', 'inf', 'stilt', 'sub', 'rel', 'voc', 'abs']);
+const NOT_YET = new Set(['stilt', 'sub', 'rel', 'voc', 'abs']);
+/** A trailing "(Temporal)" on a participle or infinitive. */
+const LABEL_RE = /\s*\(([^)]+)\)\s*$/;
 
 interface Frame {
   indent: number;
   /** Where hangers indented under this line attach. */
   hangers: HangerGroup[] | null;
   word: Word | null;
+  /** Set on a `part`/`inf` frame: slots indented under it are its own complements. */
+  verbal?: HangerMember;
 }
 
 export function parseSentence(text: string): SentenceDocument {
@@ -61,8 +65,8 @@ export function parseSentence(text: string): SentenceDocument {
       pendingVerse = rest;
       continue;
     }
-    if (PHASE_4B.has(key)) {
-      throw new SentenceParseError(`\`${key}\` is not supported yet (phase 4b)`, lineNo);
+    if (NOT_YET.has(key)) {
+      throw new SentenceParseError(`\`${key}\` is not supported yet`, lineNo);
     }
 
     // Pop frames to find the parent for this indent.
@@ -95,7 +99,15 @@ export function parseSentence(text: string): SentenceDocument {
       continue;
     }
 
-    const { conj, body } = splitConj(rest);
+    let { conj, body } = splitConj(rest);
+    let labelText: string | undefined;
+    if (key === 'part' || key === 'inf') {
+      const lm = LABEL_RE.exec(body);
+      if (lm) {
+        labelText = lm[1]!.trim();
+        body = body.slice(0, lm.index).trim();
+      }
+    }
     const word = parseWord(body);
     if (pendingVerse) {
       word.verse = pendingVerse;
@@ -105,31 +117,40 @@ export function parseSentence(text: string): SentenceDocument {
     if (SLOT_ROLES.has(key)) {
       const role = key as SlotRole;
       const c = clause ?? newClause();
-      if (parent && parent.hangers !== null && stack.length > 0) {
-        throw new SentenceParseError(`slot \`${role}\` cannot be nested under a hanger in phase 4a`, lineNo);
+      const verbal = parent?.verbal;
+      if (!verbal && parent && parent.hangers !== null && stack.length > 0) {
+        throw new SentenceParseError(`slot \`${role}\` can only be nested under \`part\` or \`inf\``, lineNo);
       }
-      let slot = c.slots[role];
+      if (verbal && role === 'verb') {
+        throw new SentenceParseError('a participle or infinitive is itself the verb', lineNo);
+      }
+      const slots = verbal ? (verbal.slots ??= {}) : c.slots;
+      let slot = slots[role];
       if (slot && !conj) throw new SentenceParseError(`slot \`${role}\` already set; use \`+ conj\` for a compound`, lineNo);
       if (!slot) {
         if (conj) throw new SentenceParseError(`\`${role} + …\` has no previous member to join`, lineNo);
         slot = { role, members: [] } as Slot;
-        c.slots[role] = slot;
+        slots[role] = slot;
       }
       const member: SlotMember = { word, hangers: [] };
       if (conj) member.conj = conj;
       slot.members.push(member);
-      stack = [{ indent, hangers: member.hangers, word }];
+      // A clause-level slot starts a new frame stack; a verbal's own slot nests inside it.
+      if (verbal) stack.push({ indent, hangers: member.hangers, word });
+      else stack = [{ indent, hangers: member.hangers, word }];
       continue;
     }
 
     if (HANGER_KINDS.has(key)) {
       const kind = key as HangerKind;
+      const verbalKind = kind === 'part' || kind === 'inf';
       if (!parent || parent.hangers === null) {
         throw new SentenceParseError(`\`${kind}\` must be indented under a word`, lineNo);
       }
       const groups = parent.hangers;
       const last = groups[groups.length - 1];
       const member: HangerMember = { word, hangers: [] };
+      if (verbalKind && labelText) member.label = labelText;
       if (conj) {
         if (!last || last.kind !== kind) throw new SentenceParseError(`\`${kind} + …\` has no previous \`${kind}\` to join`, lineNo);
         member.conj = conj;
@@ -140,7 +161,9 @@ export function parseSentence(text: string): SentenceDocument {
       } else {
         groups.push({ kind, members: [member] });
       }
-      stack.push({ indent, hangers: member.hangers, word });
+      const frame: Frame = { indent, hangers: member.hangers, word };
+      if (verbalKind) frame.verbal = member;
+      stack.push(frame);
       continue;
     }
 

@@ -1,6 +1,6 @@
 import type { MorphSegment } from '../morph.js';
 import { SLOT_ORDER } from './model.js';
-import type { ApposMember, Clause, HangerGroup, HangerMember, SentenceDocument, SlotMember, SlotRole, Word } from './model.js';
+import type { ApposMember, Clause, HangerGroup, HangerMember, SentenceDocument, Slot, SlotMember, SlotRole, Word } from './model.js';
 
 /** Returns the rendered width of `text` in px for the given class (word, label, …). */
 export type Measure = (text: string, cls: string) => number;
@@ -49,7 +49,7 @@ export interface TextPrim {
   text: string;
   /** When present the renderer draws these as tspans, so morphology classes survive. */
   segments?: MorphSegment[];
-  cls: 'word' | 'appos' | 'eq' | 'conj' | 'verse' | 'title' | 'gen';
+  cls: 'word' | 'appos' | 'eq' | 'conj' | 'verse' | 'title' | 'gen' | 'label';
   anchor?: 'start' | 'end' | 'middle';
 }
 export type Prim = LinePrim | TextPrim;
@@ -379,6 +379,113 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
   return out;
 }
 
+/**
+ * A participle or infinitive hanging from a word: it sits on its own shelf and carries the
+ * complements of a verb. An infinitive is preceded by the double-bar marker, with its accusative
+ * subject, when there is one, to the left of that marker. A grey semantic label sits beneath.
+ */
+function layoutVerbal(
+  member: HangerMember,
+  kind: 'part' | 'inf',
+  measure: Measure,
+  cfg: SentenceConfig,
+  ox: number,
+  oy: number,
+): WordSub {
+  const fs = cfg.fontSize;
+  const prims: Prim[] = [];
+  const boxes: Box[] = [];
+  const verses: VerseList = [];
+  const textY = oy - fs * 0.3;
+  const slots = member.slots ?? {};
+  let x = ox + cfg.pad * 0.5;
+
+  const drawWord = (word: Word): number => {
+    const w = measure(word.text, 'word');
+    const prim: TextPrim = { kind: 'text', x, y: textY, text: word.text, cls: 'word' };
+    if (word.segments) prim.segments = word.segments;
+    prims.push(prim);
+    boxes.push({ x0: x, y0: textY - fs, x1: x + w, y1: oy });
+    if (word.verse) verses.push({ y: textY, text: word.verse });
+    return w;
+  };
+
+  let below = 0; // depth of anything hanging from the complements
+
+  /** A complement word with whatever hangs beneath it. */
+  const place = (m: { word: Word; hangers: HangerGroup[] }): void => {
+    const w = layoutWordOnLine(m.word, m.hangers, measure, cfg, x - cfg.pad * 0.5, oy);
+    prims.push(...w.prims);
+    boxes.push(...w.boxes);
+    verses.push(...w.verses);
+    below = Math.max(below, w.height);
+    x += w.lineWidth - cfg.pad;
+  };
+
+  // Infinitive: an accusative subject, then the double-bar marker.
+  if (kind === 'inf') {
+    const subj = slots.subj?.members[0];
+    if (subj) {
+      place(subj);
+      x += cfg.pad;
+    }
+    const h = fs * 1.15;
+    prims.push({ kind: 'line', x1: x, y1: oy - h, x2: x, y2: oy, style: 'marker' });
+    prims.push({ kind: 'line', x1: x + 4, y1: oy - h, x2: x + 4, y2: oy, style: 'marker' });
+    x += 4 + cfg.pad;
+  }
+
+  const anchorX = x + 2;
+  x += drawWord(member.word);
+
+  // Complements, each behind its own marker, as on a base line.
+  const withMarker = (slot: Slot | undefined, role: SlotRole): void => {
+    const m = slot?.members[0];
+    if (!m) return;
+    const h = fs * 1.15;
+    x += cfg.pad;
+    if (role === 'comp') {
+      prims.push({ kind: 'line', x1: x + h * 0.8, y1: oy, x2: x, y2: oy - h, style: 'marker' });
+      x += h * 0.8;
+    } else if (role === 'obj2') {
+      prims.push({ kind: 'line', x1: x - 2, y1: oy - h, x2: x - 2, y2: oy, style: 'marker' });
+      prims.push({ kind: 'line', x1: x + 2, y1: oy - h, x2: x + 2, y2: oy, style: 'marker' });
+    } else {
+      prims.push({ kind: 'line', x1: x, y1: oy - h, x2: x, y2: oy, style: 'marker' });
+    }
+    x += cfg.pad;
+    place(m);
+  };
+  withMarker(slots.obj, 'obj');
+  withMarker(slots.obj2, 'obj2');
+  withMarker(slots.comp, 'comp');
+
+  const lineWidth = x - ox + cfg.pad;
+  let height = fs * 0.9;
+  if (member.label) {
+    const ly = oy + fs * 1.15;
+    prims.push({ kind: 'text', x: ox + cfg.pad * 0.5, y: ly, text: `(${member.label})`, cls: 'label' });
+    boxes.push({ x0: ox, y0: oy, x1: ox + measure(`(${member.label})`, 'label'), y1: ly + fs * 0.3 });
+    height = Math.max(height, fs * 1.5);
+  }
+
+  // The participle's own modifiers hang beneath it, from just under its first word.
+  const h = layoutHangers(member.hangers, measure, cfg, anchorX, oy + (member.label ? fs * 1.35 : 0));
+  prims.push(...h.prims);
+  boxes.push(...h.boxes);
+  verses.push(...h.verses);
+
+  return {
+    prims,
+    boxes,
+    verses,
+    height: Math.max(height, below, (member.label ? fs * 1.35 : 0) + h.height),
+    right: Math.max(x, h.right),
+    left: ox,
+    lineWidth,
+  };
+}
+
 /** Hangers stacked down a stem from the anchor (ax, ay) on the head's line. */
 function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceConfig, ax: number, ay: number): Sub {
   const fs = cfg.fontSize;
@@ -426,6 +533,25 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         x = ex + cfg.pad * 0.5;
       }
       cursor = subBottom + cfg.gap;
+      continue;
+    }
+
+    if (g.kind === 'part' || g.kind === 'inf') {
+      // Verbal: a vertical connector drops from the head to the shelf, rather than a slant.
+      const sy = cursor;
+      const py = sy + d;
+      prims.push({ kind: 'line', x1: ax, y1: sy, x2: ax, y2: py, style: 'line' });
+      let bottom = py;
+      for (const m of g.members) {
+        const v = layoutVerbal(m, g.kind, measure, cfg, ax, py);
+        prims.push({ kind: 'line', x1: ax, y1: py, x2: ax + v.lineWidth, y2: py, style: 'line' });
+        prims.push(...v.prims);
+        boxes.push(...v.boxes);
+        verses.push(...v.verses);
+        right = Math.max(right, v.right, ax + v.lineWidth);
+        bottom = Math.max(bottom, py + v.height);
+      }
+      cursor = bottom + cfg.gap;
       continue;
     }
 
