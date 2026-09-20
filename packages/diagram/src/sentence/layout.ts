@@ -77,9 +77,19 @@ interface Box {
 /** A subtree laid out in the caller's frame: its primitives, word boxes and extents. */
 type VerseList = { y: number; text: string }[];
 
+/** A clause that must be placed below the whole parent clause, once its extent is known. */
+interface Deferred {
+  kind: 'sub' | 'rel';
+  clause: Clause;
+  conjLabel?: string;
+  anchor: { x: number; y: number };
+}
+
 interface Sub {
   prims: Prim[];
   boxes: Box[];
+  /** Subordinate and relative clauses waiting to be placed by the enclosing clause. */
+  deferred: Deferred[];
   /** Verse labels found in this subtree, in the same frame as prims. */
   verses: VerseList;
   /** Height below the attach line. */
@@ -161,6 +171,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
   const prims: Prim[] = [];
   const verses: VerseList = [];
   const placed: Box[] = [];
+  const deferred: Deferred[] = [];
   let x = x0;
   let bottom = baseY + fs * 0.7;
   let right = x0;
@@ -234,6 +245,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
     prims.push(...sub.prims.map((p) => shiftPrim(p, x, baseY)));
     verses.push(...sub.verses.map((v) => ({ y: v.y + baseY, text: v.text })));
     placed.push(...sub.boxes.map((b) => shift(b, x, baseY)));
+    deferred.push(...shiftDeferred(sub.deferred, x, baseY));
     for (const b of sub.boxes) top = Math.min(top, baseY + b.y0 - 2);
     bottom = Math.max(bottom, baseY + sub.height);
     right = Math.max(right, x + sub.right);
@@ -247,6 +259,43 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
       }
     }
   }
+  // Subordinate and relative clauses go below everything this clause owns, so they never crowd it.
+  let below = bottom + cfg.gap * 1.5;
+  for (const item of deferred) {
+    const cx = Math.max(item.anchor.x + cfg.slant * 2, lineStart + cfg.slant * 2);
+    const cy = below + fs * 1.6;
+    const c = layoutClause(item.clause, measure, cfg, 0, 0);
+    if (item.kind === 'sub') {
+      prims.push({ kind: 'line', x1: item.anchor.x, y1: item.anchor.y, x2: cx, y2: cy, style: 'line' });
+      if (item.conjLabel) {
+        prims.push({
+          kind: 'text',
+          x: (item.anchor.x + cx) / 2 - 4,
+          y: (item.anchor.y + cy) / 2 + fs * 0.35,
+          text: item.conjLabel,
+          cls: 'conj',
+          anchor: 'end',
+        });
+      }
+    }
+    prims.push(...c.prims.map((pp) => shiftPrim(pp, cx, cy)));
+    verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
+    placed.push(...(c.boxes ?? []).map((b) => shift(b, cx, cy)));
+    if (item.kind === 'rel' && c.relAnchor) {
+      prims.push({
+        kind: 'line',
+        x1: item.anchor.x,
+        y1: item.anchor.y,
+        x2: cx + c.relAnchor.x,
+        y2: cy + c.relAnchor.y - fs * 0.9,
+        style: 'dotted',
+      });
+    }
+    right = Math.max(right, cx + c.right);
+    below = cy + c.bottom + cfg.gap;
+    bottom = Math.max(bottom, below);
+  }
+
   const end = lineEnd ?? Math.max(x + cfg.pad, right);
   prims.unshift({ kind: 'line', x1: lineStart, y1: baseY, x2: end, y2: baseY, style: 'base' });
   const out: ClauseOut = { prims, verses, boxes: placed, right: Math.max(right, end), top, bottom };
@@ -270,6 +319,7 @@ function layoutStilt(member: SlotMember, measure: Measure, cfg: SentenceConfig):
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   const stem = fs * 2.4;
   const half = fs * 0.4;
 
@@ -290,11 +340,13 @@ function layoutStilt(member: SlotMember, measure: Measure, cfg: SentenceConfig):
   prims.push(...h.prims);
   boxes.push(...h.boxes);
   verses.push(...h.verses);
+  deferred.push(...shiftDeferred(h.deferred, 0, 0));
 
   return {
     prims,
     boxes,
     verses,
+    deferred,
     height: Math.max(fs * 0.7, h.height - stem),
     right: Math.max(width, h.right),
     left: -half,
@@ -324,6 +376,7 @@ function layoutSlot(slot: { members: SlotMember[] }, measure: Measure, cfg: Sent
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   let bottom = 0;
   const widest = Math.max(...members.map((m) => Math.max(m.lineWidth, m.right)));
 
@@ -338,6 +391,7 @@ function layoutSlot(slot: { members: SlotMember[] }, measure: Measure, cfg: Sent
       prims.push(...m.prims.map((p) => shiftPrim(p, x0, y)));
       boxes.push(...m.boxes.map((b) => shift(b, x0, y)));
       verses.push(...m.verses.map((v) => ({ y: v.y + y, text: v.text })));
+      deferred.push(...shiftDeferred(m.deferred, x0, y));
       bottom = Math.max(bottom, y + m.height);
       const conj = slot.members[i]!.conj;
       if (conj && i > 0) {
@@ -345,7 +399,7 @@ function layoutSlot(slot: { members: SlotMember[] }, measure: Measure, cfg: Sent
         prims.push({ kind: 'text', x: widest + fd * 0.42, y: (shelfYs[i - 1]! + y) / 2 + fs * 0.35, text: conj, cls: 'conj', anchor: 'middle' });
       }
     });
-    return { prims, boxes, verses, height: bottom, right: cx, left: 0, slotWidth: cx + cfg.pad, fork: { tipX: cx, leftward: true } };
+    return { prims, boxes, verses, deferred, height: bottom, right: cx, left: 0, slotWidth: cx + cfg.pad, fork: { tipX: cx, leftward: true } };
   }
 
   const fork = forkRight(members, slot.members.map((m) => m.conj), shelfYs, fd, fs);
@@ -362,6 +416,7 @@ function forkRight(members: WordSub[], conjs: (string | undefined)[], shelfYs: n
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   let right = 0;
   let bottom = 0;
   members.forEach((m, i) => {
@@ -371,6 +426,7 @@ function forkRight(members: WordSub[], conjs: (string | undefined)[], shelfYs: n
     prims.push(...m.prims.map((p) => shiftPrim(p, fd, y)));
     boxes.push(...m.boxes.map((b) => shift(b, fd, y)));
     verses.push(...m.verses.map((v) => ({ y: v.y + y, text: v.text })));
+    deferred.push(...shiftDeferred(m.deferred, fd, y));
     right = Math.max(right, fd + Math.max(m.right, m.lineWidth));
     bottom = Math.max(bottom, y + m.height);
     const conj = conjs[i];
@@ -379,7 +435,7 @@ function forkRight(members: WordSub[], conjs: (string | undefined)[], shelfYs: n
       prims.push({ kind: 'text', x: fd * 0.58, y: (shelfYs[i - 1]! + y) / 2 + fs * 0.35, text: conj, cls: 'conj', anchor: 'middle' });
     }
   });
-  return { prims, boxes, verses, height: bottom, right, left: 0, width: right };
+  return { prims, boxes, verses, deferred, height: bottom, right, left: 0, width: right };
 }
 
 /** Member spacing and centred shelf positions for a fork. */
@@ -410,6 +466,7 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   const textY = oy - fs * 0.3;
   let x = ox + textInset + cfg.pad * 0.5;
   const tw = measure(word.text, 'word');
@@ -446,6 +503,7 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
       prims.push(...fork.prims.map((p) => shiftPrim(p, x, oy)));
       boxes.push(...fork.boxes.map((b) => shift(b, x, oy)));
       verses.push(...fork.verses.map((v) => ({ y: v.y + oy, text: v.text })));
+      deferred.push(...shiftDeferred(fork.deferred, x, oy));
       height = Math.max(height, fork.height);
       x += fork.width;
       right = Math.max(right, x);
@@ -455,6 +513,7 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
         prims.push(...w.prims);
         boxes.push(...w.boxes);
         verses.push(...w.verses);
+        deferred.push(...w.deferred);
         height = Math.max(height, w.height);
         x += w.lineWidth - cfg.pad;
         right = Math.max(right, w.right);
@@ -467,10 +526,12 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
   prims.push(...h.prims);
   boxes.push(...h.boxes);
   verses.push(...h.verses);
+  deferred.push(...h.deferred);
   const out: WordSub = {
     prims,
     boxes,
     verses,
+    deferred,
     height: Math.max(height, h.height),
     right: Math.max(right, h.right),
     left: Math.min(left, h.left),
@@ -497,6 +558,7 @@ function layoutVerbal(
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   const textY = oy - fs * 0.3;
   const slots = member.slots ?? {};
   let x = ox + cfg.pad * 0.5;
@@ -521,6 +583,7 @@ function layoutVerbal(
     prims.push(...w.prims);
     boxes.push(...w.boxes);
     verses.push(...w.verses);
+    deferred.push(...w.deferred);
     below = Math.max(below, w.height);
     x += w.lineWidth - cfg.pad;
   };
@@ -574,6 +637,7 @@ function layoutVerbal(
     prims.push(...fork.prims.map((pp) => shiftPrim(pp, x, oy)));
     boxes.push(...fork.boxes.map((b) => shift(b, x, oy)));
     verses.push(...fork.verses.map((v) => ({ y: v.y + oy, text: v.text })));
+    deferred.push(...shiftDeferred(fork.deferred, x, oy));
     below = Math.max(below, fork.height);
     x += fork.width;
   };
@@ -596,11 +660,13 @@ function layoutVerbal(
   prims.push(...h.prims);
   boxes.push(...h.boxes);
   verses.push(...h.verses);
+  deferred.push(...h.deferred);
 
   return {
     prims,
     boxes,
     verses,
+    deferred,
     height: Math.max(height, below, (member.label ? fs * 1.35 : 0) + h.height),
     right: Math.max(x, h.right),
     left: ox,
@@ -615,6 +681,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   let right = ax;
   let left = ax;
   let cursor = ay;
@@ -622,6 +689,9 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
   let lastFoot: number | null = null;
   let stemTop: number | null = null;
   let stemBottom = ay;
+  // A terrace that follows a genitive chain is set beside it, as the exports do.
+  let genRight: number | null = null;
+  let genRow: number | null = null;
 
   for (const g of groups) {
     if (g.kind === 'gen') {
@@ -650,6 +720,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
           prims.push(...aw.prims);
           boxes.push(...aw.boxes);
           verses.push(...aw.verses);
+          deferred.push(...aw.deferred);
           right = Math.max(right, aw.right);
           subBottom = Math.max(subBottom, apposRow + aw.height);
           apposRow += fs * 1.35 + aw.height;
@@ -658,57 +729,24 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         prims.push(...hs.prims);
         boxes.push(...hs.boxes);
         verses.push(...hs.verses);
+        deferred.push(...hs.deferred);
         subBottom = Math.max(subBottom, ty + fs * 0.35 + hs.height);
         right = Math.max(right, ex, hs.right);
         x = ex + cfg.pad * 0.5;
       }
       cursor = subBottom + cfg.gap;
+      genRight = right;
+      genRow = ty;
       continue;
     }
 
-    if (g.kind === 'sub') {
-      // A subordinate clause sits below, reached by a slant carrying its conjunction.
+    if (g.kind === 'sub' || g.kind === 'rel') {
+      // Deferred: the enclosing clause places these below everything else it owns.
       for (const m of g.members) {
         if (!m.clause) continue;
-        const cx = ax + cfg.slant * 2;
-        const cy = cursor + fs * 2.4;
-        const c = layoutClause(m.clause, measure, cfg, 0, 0);
-        prims.push({ kind: 'line', x1: ax, y1: ay, x2: cx, y2: cy, style: 'line' });
-        if (m.conjLabel) {
-          prims.push({ kind: 'text', x: (ax + cx) / 2 - 4, y: (ay + cy) / 2 + fs * 0.35, text: m.conjLabel, cls: 'conj', anchor: 'end' });
-        }
-        prims.push(...c.prims.map((pp) => shiftPrim(pp, cx, cy)));
-        verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
-        boxes.push(...(c.boxes ?? []).map((b) => shift(b, cx, cy)));
-        right = Math.max(right, cx + c.right);
-        cursor = cy + c.bottom + cfg.gap;
-      }
-      continue;
-    }
-
-    if (g.kind === 'rel') {
-      // A relative clause has a base line of its own, set below and slightly right of the word it
-      // modifies, with a dashed line from its pronoun back up to that word.
-      for (const m of g.members) {
-        if (!m.clause) continue;
-        const cx = ax + cfg.slant * 1.5;
-        const cy = cursor + fs * 2.2;
-        const c = layoutClause(m.clause, measure, cfg, 0, 0);
-        prims.push(...c.prims.map((p) => shiftPrim(p, cx, cy)));
-        verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
-        boxes.push(...(c.boxes ?? []).map((b) => shift(b, cx, cy)));
-        if (c.relAnchor) {
-          prims.push({
-            kind: 'line',
-            x1: ax,
-            y1: ay,
-            x2: cx + c.relAnchor.x,
-            y2: cy + c.relAnchor.y - fs * 0.9,
-            style: 'dotted',
-          });
-        }
-        right = Math.max(right, cx + c.right);
-        cursor = cy + c.bottom + cfg.gap;
+        const item: Deferred = { kind: g.kind, clause: m.clause, anchor: { x: ax, y: ay } };
+        if (m.conjLabel) item.conjLabel = m.conjLabel;
+        deferred.push(item);
       }
       continue;
     }
@@ -727,6 +765,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         prims.push(...v.prims);
         boxes.push(...v.boxes);
         verses.push(...v.verses);
+        deferred.push(...v.deferred);
         right = Math.max(right, v.right, shelfEnd);
         bottom = Math.max(bottom, py + v.height);
       }
@@ -737,8 +776,14 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
     // Terrace. The first one hangs on a single slant from the head line down to the shelf's left
     // end (long if genitive rows sit between). Later ones branch off a stem dropped from that foot,
     // each with a short slash whose foot is on the stem. Shelves run right from the foot.
-    const sy = cursor;
-    const px = ax;
+    let sy = cursor;
+    let px = ax;
+    if (genRight !== null && genRow !== null) {
+      px = Math.max(ax, genRight + cfg.pad);
+      sy = genRow - fs * 1.25; // back up to the head's line, then slant down beside the chain
+      genRight = null;
+      genRow = null;
+    }
     const py = sy + d;
     if (firstFoot === null) {
       prims.push({ kind: 'line', x1: ax + d, y1: ay, x2: px, y2: py, style: 'line' });
@@ -765,6 +810,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         prims.push(...w2.prims);
         boxes.push(...w2.boxes);
         verses.push(...w2.verses);
+        deferred.push(...w2.deferred);
         right = Math.max(right, w2.right);
         cursor = py + Math.max(fs * 0.9, w2.height) + cfg.gap;
         continue;
@@ -775,6 +821,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
       prims.push(...w.prims);
       boxes.push(...w.boxes);
       verses.push(...w.verses);
+      deferred.push(...w.deferred);
       right = Math.max(right, w.right, shelfEnd);
       cursor = py + Math.max(fs * 0.9, w.height) + cfg.gap;
     } else {
@@ -782,6 +829,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
       prims.push(...fork.prims);
       boxes.push(...fork.boxes);
       verses.push(...fork.verses);
+      deferred.push(...fork.deferred);
       right = Math.max(right, fork.right);
       cursor = py + fork.height + cfg.gap;
     }
@@ -789,7 +837,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
   if (firstFoot !== null && lastFoot !== null) prims.push({ kind: 'line', x1: ax, y1: firstFoot, x2: ax, y2: lastFoot, style: 'line' });
   // One stem carries every verbal hanging from this word, as the exports draw it.
   if (stemTop !== null) prims.unshift({ kind: 'line', x1: ax, y1: stemTop, x2: ax, y2: stemBottom, style: 'line' });
-  return { prims, boxes, verses, height: Math.max(0, cursor - cfg.gap - ay), right, left };
+  return { prims, boxes, verses, deferred, height: Math.max(0, cursor - cfg.gap - ay), right, left };
 }
 
 /** Fork of hanger members opening rightwards from (fx, fy); members stacked from fy downwards. */
@@ -800,6 +848,7 @@ function layoutHangerFork(members: HangerMember[], measure: Measure, cfg: Senten
   const prims: Prim[] = [];
   const boxes: Box[] = [];
   const verses: VerseList = [];
+  const deferred: Deferred[] = [];
   let sy = fy;
   let right = fx;
   let bottom = fy;
@@ -811,6 +860,7 @@ function layoutHangerFork(members: HangerMember[], measure: Measure, cfg: Senten
     prims.push(...w.prims.map((p) => shiftPrim(p, fx + fd, sy)));
     boxes.push(...w.boxes.map((b) => shift(b, fx + fd, sy)));
     verses.push(...w.verses.map((v) => ({ y: v.y + sy, text: v.text })));
+    deferred.push(...shiftDeferred(w.deferred, fx + fd, sy));
     right = Math.max(right, fx + fd + Math.max(w.right, w.lineWidth + fd));
     const conj = members[i]!.conj;
     if (conj && i > 0) {
@@ -820,7 +870,11 @@ function layoutHangerFork(members: HangerMember[], measure: Measure, cfg: Senten
     bottom = Math.max(bottom, sy + w.height);
     sy += Math.max(cfg.fontSize * 2.6, w.height + cfg.fontSize * 2.0);
   });
-  return { prims, boxes, verses, height: bottom - fy, right, left: fx };
+  return { prims, boxes, verses, deferred, height: bottom - fy, right, left: fx };
+}
+
+function shiftDeferred(d: Deferred[], dx: number, dy: number): Deferred[] {
+  return d.map((item) => ({ ...item, anchor: { x: item.anchor.x + dx, y: item.anchor.y + dy } }));
 }
 
 function shift(b: Box, dx: number, dy: number): Box {

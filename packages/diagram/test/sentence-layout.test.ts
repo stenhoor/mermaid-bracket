@@ -319,3 +319,36 @@ describe('the referent key, inline marks and drawing style', () => {
     );
   });
 });
+
+describe('placement of clauses and of a terrace after a genitive', () => {
+  it('sets a subordinate clause below everything else the clause owns', () => {
+    const doc = parseSentence(
+      'sentence\nverb ἐστιν\n  sub ὅτι\n    subj τὰ πάντα\n    verb ἐκτίσθη\ncomp εἰκὼν\n  gen τοῦ θεοῦ\n',
+    );
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const child = find(l.prims, 'ἐκτίσθη');
+    const gen = find(l.prims, '/ τοῦ θεοῦ');
+    // Everything the main clause owns sits above the subordinate clause.
+    expect(child.y).toBeGreaterThan(gen.y);
+    expect(child.y).toBeGreaterThan(find(l.prims, 'εἰκὼν').y);
+  });
+
+  it('keeps a relative clause below the clause, wherever it is nested', () => {
+    const doc = parseSentence(
+      'sentence\nverb ἀκούσαντες\n  part p\n    obj τὴν πίστιν\n    obj + καὶ τὴν ἀγάπην\n      rel obj ἣν\n        verb ἔχετε\n',
+    );
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const inner = find(l.prims, 'ἔχετε');
+    expect(inner.y).toBeGreaterThan(find(l.prims, 'τὴν ἀγάπην').y);
+    expect(lines(l.prims).some((x) => x.style === 'dotted')).toBe(true);
+  });
+
+  it('sets a terrace beside a genitive chain rather than below it', () => {
+    const doc = parseSentence('sentence\nverb v\nobj τὴν πίστιν\n  gen ὑμῶν\n  prep ἐν Χριστῷ\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const gen = find(l.prims, '/ ὑμῶν');
+    const prep = find(l.prims, 'ἐν Χριστῷ');
+    expect(prep.x).toBeGreaterThan(gen.x + measure(gen.text));
+    expect(Math.abs(prep.y - gen.y)).toBeLessThan(DEFAULT_SENTENCE.fontSize * 1.5);
+  });
+});
