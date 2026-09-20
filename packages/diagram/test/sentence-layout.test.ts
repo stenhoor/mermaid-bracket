@@ -281,3 +281,41 @@ describe('subordinate clauses, stilts and joins', () => {
     expect(lines(l.prims).some((x) => x.style === 'dotted' && x.x1 === x.x2 && x.y2 > x.y1)).toBe(true);
   });
 });
+
+describe('the referent key, inline marks and drawing style', () => {
+  it('colours tagged words and lists the key', () => {
+    const doc = parseSentence(
+      'sentence\nkey christ #3357d5 Jesus Christ\nsubj ὅς@christ\nverb ἐστιν\ncomp εἰκὼν@christ\n  gen τοῦ θεοῦ\n',
+    );
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    expect(find(l.prims, 'ὅς').fill).toBe('#3357d5');
+    expect(find(l.prims, 'εἰκὼν').fill).toBe('#3357d5');
+    expect(find(l.prims, 'ἐστιν').fill).toBeUndefined();
+    expect(find(l.prims, '/ τοῦ θεοῦ').fill).toBeUndefined();
+    const label = find(l.prims, 'Jesus Christ');
+    expect(label.fill).toBe('#3357d5');
+    expect(label.x).toBeGreaterThan(find(l.prims, 'εἰκὼν').x);
+  });
+
+  it('keeps inline marks as segments and out of the measured text', () => {
+    const doc = parseSentence('sentence\nverb ἐστιν\ncomp **εἰκὼν** τοῦ θεοῦ\n');
+    const word = doc.clauses[0]!.slots.comp!.members[0]!.word;
+    expect(word.text).toBe('εἰκὼν τοῦ θεοῦ'); // marks stripped for measuring
+    expect(word.segments!.find((sg) => sg.marks?.includes('strong'))!.text).toBe('εἰκὼν');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    expect(find(l.prims, 'εἰκὼν τοῦ θεοῦ').segments).toBeDefined();
+  });
+
+  it('draws a prepositional phrase Sowell-style when asked', () => {
+    const src = 'sentence\nverb ἐστιν\n  prep ἐν αὐτῷ\n';
+    const biblearc = layoutSentence(parseSentence(src), measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const sowell = layoutSentence(parseSentence(src), measure, { ...DEFAULT_SENTENCE, gutter: 0, style: 'sowell' });
+    expect(texts(biblearc.prims).some((t) => t.text === 'ἐν αὐτῷ')).toBe(true);
+    // Sowell splits the phrase: the preposition on the slant, the object behind a marker.
+    expect(texts(sowell.prims).some((t) => t.text === 'ἐν')).toBe(true);
+    expect(texts(sowell.prims).some((t) => t.text === 'αὐτῷ')).toBe(true);
+    expect(lines(sowell.prims).filter((x) => x.style === 'marker').length).toBeGreaterThan(
+      lines(biblearc.prims).filter((x) => x.style === 'marker').length,
+    );
+  });
+});

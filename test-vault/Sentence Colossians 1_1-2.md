@@ -70,6 +70,17 @@ so the `=` lines fork; `ὑμῖν` sits on the base line after the complement b
 
 See [Colossians 2:6–7](Sentence_Colossians_2_6-7.md) for those.
 
+## Presentation
+
+| Line | Draws |
+|---|---|
+| `key NAME COLOUR LABEL` | declares a referent colour and adds it to the key drawn top right |
+| `word@NAME` | colours that word with the named key |
+| `**bold**`, `*italic*`, `~~strike~~`, `==mark==` inside a word | inline emphasis, kept out of the measured text |
+| `config style sowell` | Sowell's variants: the preposition rides the slant with an object marker |
+
+See [Colossians 1:15–16](Sentence_Colossians_1_15-16.md).
+
 ## With morphology tags
 
 Codes are stripped from the drawn text and become CSS classes; see `docs/greek-morphology.css`. A tag on a

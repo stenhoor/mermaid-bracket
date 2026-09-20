@@ -17,6 +17,9 @@ export interface SentenceConfig {
   clauseGap: number;
   /** Width of the verse-reference gutter; 0 hides it. */
   gutter: number;
+  /** `biblearc` (default) writes a whole prepositional phrase on the shelf; `sowell` puts the
+   * preposition on the slant with an object marker before its object. */
+  style: 'biblearc' | 'sowell';
   padding: number;
   titleHeight: number;
 }
@@ -28,6 +31,7 @@ export const DEFAULT_SENTENCE: SentenceConfig = {
   gap: 16,
   clauseGap: 52,
   gutter: 96,
+  style: 'biblearc',
   padding: 8,
   titleHeight: 34,
 };
@@ -49,6 +53,8 @@ export interface TextPrim {
   text: string;
   /** When present the renderer draws these as tspans, so morphology classes survive. */
   segments?: MorphSegment[];
+  /** Colour from the diagram's referent key. */
+  fill?: string;
   cls: 'word' | 'appos' | 'eq' | 'conj' | 'verse' | 'title' | 'gen' | 'label';
   anchor?: 'start' | 'end' | 'middle';
 }
@@ -82,7 +88,11 @@ interface Sub {
   left: number;
 }
 
+/** Referent colours for the diagram being laid out, keyed by name. */
+let referentColours: Map<string, string> = new Map();
+
 export function layoutSentence(doc: SentenceDocument, measure: Measure, cfg: SentenceConfig = DEFAULT_SENTENCE): SentenceLayout {
+  referentColours = new Map((doc.keys ?? []).map((k) => [k.name, k.colour]));
   const prims: Prim[] = [];
   const fs = cfg.fontSize;
   const x0 = cfg.padding + cfg.gutter;
@@ -111,6 +121,18 @@ export function layoutSentence(doc: SentenceDocument, measure: Measure, cfg: Sen
     previousBase = { x: baseX, y: dy };
     maxRight = Math.max(maxRight, c.right);
     y = c.bottom + dy + cfg.clauseGap;
+  }
+
+  // The referent key, top right, each label in its own colour.
+  if (doc.keys?.length) {
+    const kx = maxRight + cfg.pad * 3;
+    let ky = cfg.padding + fs;
+    prims.push({ kind: 'text', x: kx, y: ky, text: 'Key:', cls: 'label' });
+    for (const k of doc.keys) {
+      ky += fs * 1.5;
+      prims.push({ kind: 'text', x: kx, y: ky, text: k.label, cls: 'word', fill: k.colour });
+      maxRight = Math.max(maxRight, kx + measure(k.label, 'word'));
+    }
   }
 
   const height = y - cfg.clauseGap + cfg.padding;
@@ -227,7 +249,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
   }
   const end = lineEnd ?? Math.max(x + cfg.pad, right);
   prims.unshift({ kind: 'line', x1: lineStart, y1: baseY, x2: end, y2: baseY, style: 'base' });
-  const out: ClauseOut = { prims, verses, right: Math.max(right, end), top, bottom };
+  const out: ClauseOut = { prims, verses, boxes: placed, right: Math.max(right, end), top, bottom };
   if (relAnchor) out.relAnchor = relAnchor;
   return out;
 }
@@ -394,6 +416,8 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
   if (word.text) {
     const wordPrim: TextPrim = { kind: 'text', x, y: textY, text: word.text, cls: 'word' };
     if (word.segments) wordPrim.segments = word.segments;
+    const colour = word.ref ? referentColours.get(word.ref) : undefined;
+    if (colour) wordPrim.fill = colour;
     prims.push(wordPrim);
     boxes.push({ x0: x, y0: textY - fs, x1: x + tw, y1: oy });
   }
@@ -481,6 +505,8 @@ function layoutVerbal(
     const w = measure(word.text, 'word');
     const prim: TextPrim = { kind: 'text', x, y: textY, text: word.text, cls: 'word' };
     if (word.segments) prim.segments = word.segments;
+    const colour = word.ref ? referentColours.get(word.ref) : undefined;
+    if (colour) prim.fill = colour;
     prims.push(prim);
     boxes.push({ x0: x, y0: textY - fs, x1: x + w, y1: oy });
     if (word.verse) verses.push({ y: textY, text: word.verse });
@@ -608,6 +634,8 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         const label = `/ ${m.word.text}`;
         const genPrim: TextPrim = { kind: 'text', x, y: ty, text: label, cls: 'gen' };
         if (m.word.segments) genPrim.segments = [{ text: '/ ' }, ...m.word.segments];
+        const genColour = m.word.ref ? referentColours.get(m.word.ref) : undefined;
+        if (genColour) genPrim.fill = genColour;
         prims.push(genPrim);
         const w = measure(label, 'gen');
         boxes.push({ x0: x, y0: ty - fs, x1: x + w, y1: ty + fs * 0.3 });
@@ -651,6 +679,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         }
         prims.push(...c.prims.map((pp) => shiftPrim(pp, cx, cy)));
         verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
+        boxes.push(...(c.boxes ?? []).map((b) => shift(b, cx, cy)));
         right = Math.max(right, cx + c.right);
         cursor = cy + c.bottom + cfg.gap;
       }
@@ -667,6 +696,7 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         const c = layoutClause(m.clause, measure, cfg, 0, 0);
         prims.push(...c.prims.map((p) => shiftPrim(p, cx, cy)));
         verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
+        boxes.push(...(c.boxes ?? []).map((b) => shift(b, cx, cy)));
         if (c.relAnchor) {
           prims.push({
             kind: 'line',
@@ -720,6 +750,25 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
     left = Math.min(left, px);
     if (g.members.length === 1) {
       const m = g.members[0]!;
+      if (cfg.style === 'sowell' && g.kind === 'prep') {
+        // Sowell: the preposition rides the slant, its object sits behind a marker on the shelf.
+        const words = m.word.text.split(/\s+/);
+        const prepText = words.shift() ?? '';
+        const objText = words.join(' ');
+        prims.push({ kind: 'text', x: px - d * 0.9, y: py - d * 0.45, text: prepText, cls: 'word' });
+        const mx = px + cfg.pad;
+        prims.push({ kind: 'line', x1: mx, y1: py - fs * 0.9, x2: mx, y2: py, style: 'marker' });
+        const obj: Word = { text: objText, appos: m.word.appos };
+        if (m.word.segments) obj.segments = m.word.segments;
+        const w2 = layoutWordOnLine(obj, m.hangers, measure, cfg, mx + cfg.pad * 0.5, py, 0);
+        prims.push({ kind: 'line', x1: px, y1: py, x2: mx + cfg.pad * 0.5 + w2.lineWidth, y2: py, style: 'line' });
+        prims.push(...w2.prims);
+        boxes.push(...w2.boxes);
+        verses.push(...w2.verses);
+        right = Math.max(right, w2.right);
+        cursor = py + Math.max(fs * 0.9, w2.height) + cfg.gap;
+        continue;
+      }
       const w = layoutWordOnLine(m.word, m.hangers, measure, cfg, px, py, d);
       const shelfEnd = px + w.lineWidth + cfg.pad;
       prims.push({ kind: 'line', x1: px, y1: py, x2: shelfEnd, y2: py, style: 'line' });

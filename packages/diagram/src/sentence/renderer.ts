@@ -74,6 +74,8 @@ function prim(ownerDoc: Document, p: Prim): SVGElement {
     return el(ownerDoc, 'line', { class: `sd-${p.style}`, x1: r(p.x1), y1: r(p.y1), x2: r(p.x2), y2: r(p.y2) });
   }
   const t = el(ownerDoc, 'text', { class: `sd-${p.cls}`, x: r(p.x), y: r(p.y) });
+  // An inline style, because the injected stylesheet's `fill` would beat a presentation attribute.
+  if (p.fill) t.setAttribute('style', `fill:${p.fill}`);
   if (p.anchor) t.setAttribute('text-anchor', p.anchor);
   t.setAttribute('xml:space', 'preserve');
   if (p.segments) {
@@ -82,9 +84,12 @@ function prim(ownerDoc: Document, p: Prim): SVGElement {
       if (!seg.text) continue;
       const span = el(ownerDoc, 'tspan', {});
       span.setAttribute('xml:space', 'preserve');
+      if (seg.marks?.length) span.setAttribute('class', seg.marks.map((m) => `sd-${m}`).join(' '));
       if (seg.morph) {
         for (const [k, v] of Object.entries(morphAttributes(seg.text, seg.morph))) {
-          if (k !== 'title') span.setAttribute(k, v);
+          if (k === 'title') continue;
+          if (k === 'class' && seg.marks?.length) span.setAttribute(k, `${v} ${seg.marks.map((m) => `sd-${m}`).join(' ')}`);
+          else span.setAttribute(k, v);
         }
         const title = el(ownerDoc, 'title', {});
         title.textContent = morphTitle(seg.text, seg.morph);

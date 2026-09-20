@@ -1,6 +1,6 @@
-import { hasMorph, stripMorph, tokenizeMorph } from '../morph.js';
+import { hasMorph, stripInline, stripMorph, tokenizeInline, tokenizeMorph } from '../morph.js';
 import { SentenceParseError, SLOT_ORDER } from './model.js';
-import type { ApposMember, Clause, HangerGroup, HangerKind, HangerMember, SentenceDocument, Slot, SlotMember, SlotRole, Word } from './model.js';
+import type { ApposMember, Clause, ReferentKey, HangerGroup, HangerKind, HangerMember, SentenceDocument, Slot, SlotMember, SlotRole, Word } from './model.js';
 
 const KEYWORD_RE = /^\s*sentence\s*$/;
 const CONFIG_RE = /^\s*config\s+([A-Za-z][\w.]*)\s+(.+?)\s*$/;
@@ -71,6 +71,16 @@ export function parseSentence(text: string): SentenceDocument {
       const c = clause ?? newClause();
       if (!rest) throw new SentenceParseError(`\`${key}\` needs text`, lineNo);
       (c.floating ??= []).push({ kind: key, word: makeWord(rest) });
+      continue;
+    }
+    if (key === 'key') {
+      // `key NAME COLOUR LABEL…` declares a referent colour.
+      const parts = rest.split(/\s+/);
+      const name = parts.shift();
+      const colour = parts.shift();
+      if (!name || !colour) throw new SentenceParseError('`key` needs a name, a colour and a label', lineNo);
+      const entry: ReferentKey = { name, colour, label: parts.join(' ') || name };
+      (doc.keys ??= []).push(entry);
       continue;
     }
     if (key === 'verse') {
@@ -237,10 +247,22 @@ function parseWord(body: string): Word {
   return head;
 }
 
-/** Strips `^CODE` morphology tags into segments; `text` is what gets measured and drawn. */
+/**
+ * Strips a trailing `@ref`, morphology tags and inline marks; `text` is what gets measured and
+ * drawn, while `segments` keeps the detail for the renderer.
+ */
 function makeWord(raw: string): Word {
-  const word: Word = { text: stripMorph(raw), appos: [] };
-  if (hasMorph(raw)) word.segments = tokenizeMorph(raw);
+  let body = raw;
+  let ref: string | undefined;
+  const refMatch = /@([A-Za-z][\w-]*)\s*$/.exec(body);
+  if (refMatch) {
+    ref = refMatch[1]!;
+    body = body.slice(0, refMatch.index).trim();
+  }
+  const segments = tokenizeInline(tokenizeMorph(body));
+  const word: Word = { text: stripInline(stripMorph(body)), appos: [] };
+  if (segments.some((sg) => sg.morph || sg.marks)) word.segments = segments;
+  if (ref) word.ref = ref;
   return word;
 }
 

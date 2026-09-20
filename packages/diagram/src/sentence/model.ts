@@ -20,6 +20,14 @@ export interface Word {
   appos: ApposMember[];
   /** Verse reference attached to this word (from a preceding `verse` line). */
   verse?: string;
+  /** Referent tag from `word@name`, coloured by the diagram's key. */
+  ref?: string;
+}
+
+export interface ReferentKey {
+  name: string;
+  colour: string;
+  label: string;
 }
 
 export interface ApposMember {
@@ -78,6 +86,8 @@ export interface Clause {
 
 export interface SentenceDocument {
   title?: string;
+  /** Referent colours declared with `key NAME COLOUR LABEL`. */
+  keys?: ReferentKey[];
   options: Record<string, string | number | boolean>;
   clauses: Clause[];
 }

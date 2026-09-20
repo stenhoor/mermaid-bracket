@@ -169,6 +169,53 @@ export function morphLabel(m: Morph): string {
 export interface MorphSegment {
   text: string;
   morph?: Morph;
+  /** Inline marks around this run: strong, em, del, mark. */
+  marks?: string[];
+}
+
+/** `**bold**`, `*italic*`, `~~strike~~`, `==highlight==` inside a diagram word. */
+const INLINE_MARKS: Record<string, string> = { '**': 'strong', '*': 'em', '~~': 'del', '==': 'mark' };
+
+/**
+ * Split text on the inline marks, keeping any morphology segments intact. Marks nest, so a run
+ * carries every mark open around it.
+ */
+export function tokenizeInline(segments: MorphSegment[]): MorphSegment[] {
+  const out: MorphSegment[] = [];
+  const open: string[] = [];
+  for (const seg of segments) {
+    if (seg.morph) {
+      out.push(open.length ? { ...seg, marks: [...open] } : seg);
+      continue;
+    }
+    let buf = '';
+    const flush = (): void => {
+      if (!buf) return;
+      out.push(open.length ? { text: buf, marks: [...open] } : { text: buf });
+      buf = '';
+    };
+    for (let i = 0; i < seg.text.length; i++) {
+      const two = seg.text.slice(i, i + 2);
+      const one = seg.text[i]!;
+      const token = INLINE_MARKS[two] ? two : INLINE_MARKS[one] ? one : '';
+      if (token) {
+        flush();
+        const at = open.lastIndexOf(INLINE_MARKS[token]!);
+        if (at >= 0) open.splice(at, 1);
+        else open.push(INLINE_MARKS[token]!);
+        i += token.length - 1;
+        continue;
+      }
+      buf += one;
+    }
+    flush();
+  }
+  return out;
+}
+
+/** The text with inline marks removed, for measuring. */
+export function stripInline(text: string): string {
+  return text.replace(/\*\*|~~|==|\*/g, '');
 }
 
 /** A word may carry a code: `λόγος^N-----NSM-`. Backslash escapes the sigil. */
