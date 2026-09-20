@@ -11,9 +11,9 @@ export function sentenceStyles(): string {
     --sentence-title: #222222;
     font-family: inherit;
   }
-  .sd-base { stroke: var(--sentence-ink); stroke-width: 1.4; }
-  .sd-line { stroke: var(--sentence-ink); stroke-width: 1.1; }
-  .sd-marker { stroke: var(--sentence-ink); stroke-width: 1.3; }
+  .sd-base { stroke: var(--sentence-ink); stroke-width: 1.7; }
+  .sd-line { stroke: var(--sentence-ink); stroke-width: 1.4; }
+  .sd-marker { stroke: var(--sentence-ink); stroke-width: 1.5; }
   .sd-dotted { stroke: var(--sentence-ink); stroke-width: 1; stroke-dasharray: 2 3; }
   .sd-guide { stroke: var(--sentence-guide); stroke-width: 1; stroke-dasharray: 4 4; }
   .sd-word, .sd-appos { font-size: var(--sentence-font-size, 14px); fill: var(--sentence-ink); }

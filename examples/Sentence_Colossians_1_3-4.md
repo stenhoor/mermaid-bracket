@@ -13,10 +13,6 @@ verse 1:3
 clause
   verb  Εὐχαριστοῦμεν
     mod   πάντοτε
-    mod   τῷ θεῷ
-      = πατρὶ
-      gen   τοῦ κυρίου
-      gen   ἡμῶν
     part  προσευχόμενοι (Temporal)
       prep  περὶ ὑμῶν
     verse 1:4
@@ -24,6 +20,12 @@ clause
       obj   τὴν πίστιν
         gen   ὑμῶν
         prep  ἐν Χριστῷ Ἰησοῦ
+      obj   + καὶ τὴν ἀγάπην
+        prep  εἰς τοὺς ἁγίους
+  obj   τῷ θεῷ
+    = πατρὶ
+      gen   τοῦ κυρίου
+      gen   ἡμῶν = Ἰησοῦ Χριστοῦ
 ```
 
 An adverbial infinitive hangs the same way, with the double-bar marker before it, from

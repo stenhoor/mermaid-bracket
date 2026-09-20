@@ -189,3 +189,30 @@ describe('participles and infinitives', () => {
     expect(pair).toHaveLength(2);
   });
 });
+
+describe('a verbal\'s complements', () => {
+  it('forks a compound object and writes an appositive of a genitive on its own row', () => {
+    const doc = parseSentence(`sentence
+verb Εὐχαριστοῦμεν
+  part ἀκούσαντες (Causal)
+    obj τὴν πίστιν
+    obj + καὶ τὴν ἀγάπην
+obj τῷ θεῷ
+  = πατρὶ
+    gen τοῦ κυρίου
+    gen ἡμῶν = Ἰησοῦ Χριστοῦ
+`);
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const first = find(l.prims, 'τὴν πίστιν');
+    const second = find(l.prims, 'τὴν ἀγάπην');
+    expect(second.y).toBeGreaterThan(first.y);
+    expect(texts(l.prims).some((t) => t.text === 'καὶ' && t.cls === 'conj')).toBe(true);
+    // The genitive chain sits under its head, and its appositive drops to the next row.
+    const patri = find(l.prims, 'πατρὶ');
+    const chain = find(l.prims, '/ τοῦ κυρίου');
+    const appos = find(l.prims, 'Ἰησοῦ Χριστοῦ');
+    expect(chain.y).toBeGreaterThan(patri.y);
+    expect(chain.x).toBeGreaterThanOrEqual(patri.x - DEFAULT_SENTENCE.pad);
+    expect(appos.y).toBeGreaterThan(chain.y);
+  });
+});

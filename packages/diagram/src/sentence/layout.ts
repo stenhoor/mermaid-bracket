@@ -23,10 +23,10 @@ export interface SentenceConfig {
 
 export const DEFAULT_SENTENCE: SentenceConfig = {
   fontSize: 14,
-  slant: 20,
+  slant: 22,
   pad: 12,
-  gap: 12,
-  clauseGap: 44,
+  gap: 16,
+  clauseGap: 52,
   gutter: 96,
   padding: 8,
   titleHeight: 34,
@@ -442,6 +442,7 @@ function layoutVerbal(
   const withMarker = (slot: Slot | undefined, role: SlotRole): void => {
     const m = slot?.members[0];
     if (!m) return;
+    const compound = (slot?.members.length ?? 0) > 1;
     const h = fs * 1.15;
     x += cfg.pad;
     if (role === 'comp') {
@@ -454,7 +455,24 @@ function layoutVerbal(
       prims.push({ kind: 'line', x1: x, y1: oy - h, x2: x, y2: oy, style: 'marker' });
     }
     x += cfg.pad;
-    place(m);
+    if (!compound) {
+      place(m);
+      return;
+    }
+    // Compound complement: a rightward fork opening from the marker.
+    const laid = slot!.members.map((mm) =>
+      layoutWordOnLine(mm.word, mm.hangers, measure, cfg, 0, 0, cfg.slant * 0.5),
+    );
+    const conjW = Math.max(0, ...slot!.members.map((mm) => (mm.conj ? measure(mm.conj, 'conj') : 0)));
+    const fd = Math.max(fs * 3.6, conjW * 1.6 + 16);
+    // Members are stacked around the shelf, so the first sits above the line rather than on it.
+    const shelfYs = forkShelfYs(laid, fs);
+    const fork = forkRight(laid, slot!.members.map((mm) => mm.conj), shelfYs, fd, fs);
+    prims.push(...fork.prims.map((pp) => shiftPrim(pp, x, oy)));
+    boxes.push(...fork.boxes.map((b) => shift(b, x, oy)));
+    verses.push(...fork.verses.map((v) => ({ y: v.y + oy, text: v.text })));
+    below = Math.max(below, fork.height);
+    x += fork.width;
   };
   withMarker(slots.obj, 'obj');
   withMarker(slots.obj2, 'obj2');
@@ -470,6 +488,7 @@ function layoutVerbal(
   }
 
   // The participle's own modifiers hang beneath it, from just under its first word.
+  // The verbal's own modifiers hang below its label, and below anything its complements carry.
   const h = layoutHangers(member.hangers, measure, cfg, anchorX, oy + (member.label ? fs * 1.35 : 0));
   prims.push(...h.prims);
   boxes.push(...h.boxes);
@@ -498,13 +517,16 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
   let cursor = ay;
   let firstFoot: number | null = null;
   let lastFoot: number | null = null;
+  let stemTop: number | null = null;
+  let stemBottom = ay;
 
   for (const g of groups) {
     if (g.kind === 'gen') {
       // Slash chain directly under the head: "/ a / b"; each member may carry appositives and hangers.
-      let x = ax + d * 0.75 + 2;
+      let x = ax - 2;
       const ty = cursor + fs * 1.25;
       let subBottom = ty + fs * 0.45;
+      let apposRow = ty + fs * 1.35; // appositives of a genitive drop to the next row
       for (const m of g.members) {
         const label = `/ ${m.word.text}`;
         const genPrim: TextPrim = { kind: 'text', x, y: ty, text: label, cls: 'gen' };
@@ -513,16 +535,19 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         const w = measure(label, 'gen');
         boxes.push({ x0: x, y0: ty - fs, x1: x + w, y1: ty + fs * 0.3 });
         if (m.word.verse) verses.push({ y: ty, text: m.word.verse });
-        let ex = x + w;
+        const ex = x + w;
+        // An appositive of a genitive is written on the row beneath it, as the exports do.
         for (const a of m.word.appos) {
-          // Appositive of a genitive: inline after it (hangers on such appositives are not drawn here).
-          ex += cfg.pad;
-          prims.push({ kind: 'text', x: ex, y: ty, text: '=', cls: 'eq' });
-          ex += measure('=', 'eq') + cfg.pad;
-          const aw = measure(a.word.text, 'word');
-          prims.push({ kind: 'text', x: ex, y: ty, text: a.word.text, cls: 'appos' });
-          boxes.push({ x0: ex, y0: ty - fs, x1: ex + aw, y1: ty + fs * 0.3 });
-          ex += aw;
+          let axx = x + cfg.pad;
+          prims.push({ kind: 'text', x: axx, y: apposRow, text: '=', cls: 'eq' });
+          axx += measure('=', 'eq') + cfg.pad;
+          const aw = layoutWordOnLine(a.word, a.hangers, measure, cfg, axx - cfg.pad * 0.5, apposRow);
+          prims.push(...aw.prims);
+          boxes.push(...aw.boxes);
+          verses.push(...aw.verses);
+          right = Math.max(right, aw.right);
+          subBottom = Math.max(subBottom, apposRow + aw.height);
+          apposRow += fs * 1.35 + aw.height;
         }
         const hs = layoutHangers(m.hangers, measure, cfg, x + fs * 0.9, ty + fs * 0.35);
         prims.push(...hs.prims);
@@ -537,18 +562,20 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
     }
 
     if (g.kind === 'part' || g.kind === 'inf') {
-      // Verbal: a vertical connector drops from the head to the shelf, rather than a slant.
-      const sy = cursor;
-      const py = sy + d;
-      prims.push({ kind: 'line', x1: ax, y1: sy, x2: ax, y2: py, style: 'line' });
+      // Verbal: it hangs from a vertical stem dropped from the head, one stem for all of them,
+      // with each verbal's shelf attached to it. The stem is drawn once, after the loop.
+      const py = cursor + d;
+      if (stemTop === null) stemTop = ay;
+      stemBottom = py;
       let bottom = py;
       for (const m of g.members) {
         const v = layoutVerbal(m, g.kind, measure, cfg, ax, py);
-        prims.push({ kind: 'line', x1: ax, y1: py, x2: ax + v.lineWidth, y2: py, style: 'line' });
+        const shelfEnd = ax + v.lineWidth + cfg.pad * 1.5;
+        prims.push({ kind: 'line', x1: ax, y1: py, x2: shelfEnd, y2: py, style: 'line' });
         prims.push(...v.prims);
         boxes.push(...v.boxes);
         verses.push(...v.verses);
-        right = Math.max(right, v.right, ax + v.lineWidth);
+        right = Math.max(right, v.right, shelfEnd);
         bottom = Math.max(bottom, py + v.height);
       }
       cursor = bottom + cfg.gap;
@@ -589,6 +616,8 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
     }
   }
   if (firstFoot !== null && lastFoot !== null) prims.push({ kind: 'line', x1: ax, y1: firstFoot, x2: ax, y2: lastFoot, style: 'line' });
+  // One stem carries every verbal hanging from this word, as the exports draw it.
+  if (stemTop !== null) prims.unshift({ kind: 'line', x1: ax, y1: stemTop, x2: ax, y2: stemBottom, style: 'line' });
   return { prims, boxes, verses, height: Math.max(0, cursor - cfg.gap - ay), right, left };
 }
 
