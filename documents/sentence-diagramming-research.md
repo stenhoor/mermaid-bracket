@@ -212,6 +212,9 @@ Estimated size: parser ~300 lines, layout ~600, renderer ~350, on top of shared 
 
 ## 7. Delivery recommendation
 
+> **Status, 2026-09-20:** all three sub-phases below are built. This section is kept as the record of
+> what was planned; `CLAUDE.md` describes what exists.
+
 - **Phase 4a — core:** base line slots and markers, `mod`, `gen`, `prep`, `=`, `conj`, `+` forks for slots and hangers, `(X)`/brackets pass-through, verse gutter, title. Covers Col 1:1–2 and most single clauses.
 - **Phase 4b — clauses and verbals:** `part` with labels, `inf` with marker and accusative subject, `stilt`, `sub`, `rel` with dotted links, compound clauses. This is the bulk of the six exports.
 - **Phase 4c — presentation:** colour key tags, inline formatting in words, `config style sowell` variants (preposition on the slant, right-slant subordinate clauses), export reuse, transcription of all six exports as fixtures with a parse-and-layout test like `examples.test.ts`.
