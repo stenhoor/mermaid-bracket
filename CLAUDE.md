@@ -15,6 +15,24 @@ Both render inside ordinary ```mermaid fences. The plugin registers them on Obsi
 Mermaid via `loadMermaid()` + `registerExternalDiagrams`; nothing is fetched from the network and no
 cloud service is involved.
 
+## Working with the user
+
+**Check every factual claim before writing it, including the ones that feel incidental.** Dates,
+timescales, "this matches the target", "that is already documented", "I verified it". Code gets tested
+here; prose has not been, and that is backwards, because the prose is what the user actually reads. If
+a claim cannot be checked in the moment, say what was not checked rather than asserting it.
+
+- **Comparisons must be shown, not asserted.** Never say a render matches a target without putting
+  them side by side. Crop the PDF with `pdftoppm`, stack it above a headless render, look at it, and
+  send the image.
+- **If a check or a screenshot is claimed, deliver it in the same message.**
+- **When the user corrects something, the correction stands.** Fix it and say what was wrong. Do not
+  argue about how they characterised the mistake, and do not follow an error with a pivot to the next
+  task; that combination reads as dismissive, and in this session it did.
+
+This is recorded because the pattern happened repeatedly on 2026-09-20: an unchecked claim, then a
+defence of the wording, then a quick apology and a move on. The user named it as unacceptable.
+
 ## Ground rules
 
 - **No cloud, no CDN.** Everything runs locally in the vault.
