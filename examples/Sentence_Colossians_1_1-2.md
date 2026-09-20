@@ -1,6 +1,6 @@
 # Colossians 1:1–2 (sentence diagram)
 
-Target: page 1 of `SENTENCE_Colossians _1_1_8.pdf`. Phase 4a features only: verbless clauses with the
+Target: page 1 of `SENTENCE_Colossians _1_1_8.pdf`. Uses only the base-line shapes: verbless clauses with the
 predicate marker, compound subjects, appositives with `=`, slash genitives, prepositional terraces.
 
 ```mermaid
@@ -38,7 +38,7 @@ Notes on the transcription: Biblearc writes the appositive first in 1:1 (`ἀπ�
 joins the two on the line; `τοῖς` is the object and its appositive is the compound `ἁγίοις καὶ ἀδελφοῖς`,
 so the `=` lines fork; `ὑμῖν` sits on the base line after the complement backslash (the verb is elided).
 
-## Phase 4a keywords
+## Keywords
 
 | Line | Draws |
 |---|---|

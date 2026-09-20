@@ -1,7 +1,7 @@
 # Colossians 2:6–7 and 2:1 (sentence diagram)
 
 Targets: `SENTENCE_Colossians _2_6_15.pdf` and `SENTENCE_Colossians _2_1_5.pdf`. Between them these
-use every construction phase 4b added: subordinate clauses on a labelled slant, a participle, a
+use every clause-level construction: subordinate clauses on a labelled slant, a participle, a
 substantival infinitive on a standard, and two clauses joined by a conjunction.
 
 ```mermaid

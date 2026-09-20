@@ -2,102 +2,200 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project goal
+## What this is
 
-Build a **custom, reusable Mermaid diagram type** for Biblearc-style bracketing diagrams. Input is Mermaid-conformant text (a fenced code block with a new diagram keyword); output renders wherever Mermaid renders and reproduces the look of the diagrams in `examples/`.
+Two custom Mermaid diagram types for Bible study, delivered as an Obsidian plugin:
 
-Requirements:
-1. Support all 18 logical relationships defined in `documents/`.
-2. Bracketing layouts with arbitrary multi-level nesting (a whole-book bracket nests pericope brackets).
-3. Text blocks per proposition, with Markdown-style inline formatting inside them.
-4. Multi-column text layouts so one row can show several translations side by side, including Greek/original-language text (Unicode, polytonic).
+- **`bracket`** — Biblearc-style bracketing of a passage's logical structure using the 18 logical
+  relationships, with nested brackets, a verse-reference column and multi-column text.
+- **`sentence`** — Greek sentence diagrams in the KoineWorks/Sowell adaptation of Reed–Kellogg, as
+  implemented by Biblearc's Diagram module.
 
-**Initial target environment is Obsidian, as an Obsidian plugin, preferably extending an existing one.** No cloud or CDN rendering service; everything runs locally inside the vault. Obsidian bundles Mermaid (11.13 as of Obsidian 1.13.4) and exposes it to plugins via `loadMermaid()`; Mermaid's `registerExternalDiagrams` works on that instance. Design the parser/renderer so they are not tied to Obsidian; other rendering targets are planned for later phases.
+Both render inside ordinary ```mermaid fences. The plugin registers them on Obsidian's own bundled
+Mermaid via `loadMermaid()` + `registerExternalDiagrams`; nothing is fetched from the network and no
+cloud service is involved.
 
-## Roadmap (agreed 2026-09-13)
+## Ground rules
 
-1. **Proof of concept — DONE 2026-09-13, verified by the user in Obsidian 1.13.7.** Registration on Obsidian's bundled Mermaid via `loadMermaid()` works, foreignObject row measurement works, ordinary Mermaid blocks are unaffected. Nested brackets, group colours, multiple columns, stars/labels and the `config` option line landed here too.
-2. **Full bracket features — largely done 2026-09-13; see "Phase 2 leftovers" below.** Arbitrary nesting, forests (multiple top-level items), per-child labels and stars, stacked labels, all 18 relationships with group colours (coordinate green, distinct statement red, restatement blue, contrary orange), inference/bilateral glyphs, verse-ref column with wrapping, multiple text columns with headers, title from frontmatter, stable CSS class names and CSS variables.
-3. **Text formatting — done 2026-09-13 (built-in and Obsidian formatters; link-click behaviour inside foreignObject awaits user confirmation).** Built-in inline subset (bold, italic, strike, `==highlight==`, `|` bar, `{blue brackets}`) behind a pluggable formatter interface; then an Obsidian-side formatter using `MarkdownRenderer`. Verify DOMPurify survival and internal-link click handling before relying on it. Embeds and callouts inside cells are out of scope.
-
-4. **Sentence diagramming — 4a done 2026-09-14 (base line slots/markers, mod/prep/gen hangers, `=` appositives, forks, sentence conj, verse gutter); `part` and `inf` added 2026-09-19 (vertical connector onto the verbal's own shelf, grey semantic label, the verbal's own obj/obj2/comp behind their markers, an infinitive's accusative subject before the double bar); **4b completed 2026-09-20**: `rel ROLE TEXT` (clause below the antecedent, dashed link from its pronoun, `layoutClause` reports `relAnchor`), `sub CONJ` (clause on a labelled slant), `obj stilt` (triangle and stem raising a clause above the base line), `voc`/`abs` (floating shelf above the clause with a dotted link; `abs` is bracketed), and `clause + CONJ` (two base lines forked with the conjunction on a dotted link). **4c done 2026-09-20**: `key NAME COLOUR LABEL` plus `word@NAME` colours referents and draws the key top right (the colour is written as an inline `style`, since the injected stylesheet's `fill` beats a presentation attribute); inline marks (`**`, `*`, `~~`, `==`) become tspan classes and are stripped from the measured text; `config style sowell` puts a preposition on the slant with an object marker. Four of the six exports have a transcribed fixture; the rest is transcription work, not code. Both earlier gaps are closed (2026-09-20): subordinate and relative clauses are **deferred** — `layoutHangers` collects them into `Sub.deferred`, every stage shifts those anchors alongside boxes, and `layoutClause` places them below everything it owns, drawing the slant or dashed link back to the anchor; and a terrace following a genitive chain is set beside the chain rather than under it. When adding a new layout stage, remember to forward `deferred` as well as prims, boxes and verses, or the clause silently disappears.** Target is the KoineWorks/Sowell Greek Reed–Kellogg system as implemented by Biblearc's Diagram module; the six `examples/SENTENCE_Colossians*.pdf` exports (they have a text layer) are the target output. Design input is `docs/reference/` — readable versions of the Biblearc sheets: the 18 relationships (one live diagram each), the English and Greek conjunction tables (transcribed from the PDFs by word position, see the note below), and a practice set of example sentences. Definitions and example sentences are written fresh rather than copied, so the pages can sit in a public repo; the conjunction data is factual and transcribed as is. `examples.test.ts` parses every diagram on these pages, so they cannot drift from the parser.
-
-`documents/sentence-diagramming-research.md` (§2b shape catalogue with Sowell's names, §5 syntax with two worked Colossians transcriptions, §6 layout sketch, §7 sub-phases 4a–4c). Planned as a second external diagram `sentence` registered by the same plugin, native SVG text (no foreignObject).
-
-Phase 2 leftovers: a star on a top-level bracket is parsed but not drawn (nothing to attach it to); the parent-arm attachment point is an approximation of Biblearc's (starred arm, else midpoint) and may want a per-diagram option; the bilateral relationship renders generically with three children and no special glyph.
-
-Keep the parser and layout free of Obsidian imports throughout; only the plugin adapter and the phase-3 formatter may touch the Obsidian API.
-
-## Decisions (2026-09-13)
-
-- **Layout:** npm workspaces, two packages. `packages/diagram` is the framework-free Mermaid external diagram (parser, layout, SVG); `packages/obsidian-plugin` is the thin adapter. Only the plugin package may import from `obsidian`.
-- **Keyword:** blocks start with `bracket` inside a normal ```mermaid fence.
-- **Plugin id:** `mermaid-bracket`, MIT licence.
-- **Test vault:** `test-vault/` in the repo; the plugin build copies `main.js`, `manifest.json`, `styles.css` into `test-vault/.obsidian/plugins/mermaid-bracket/`. Open it in Obsidian (installed locally, 1.13.x, bundled Mermaid 11.13). Never run the `obsidian` binary from a script: it launches the GUI and blocks.
-- **Toolchain:** Node 26, npm only (no pnpm/bun). TypeScript + esbuild for the plugin, vitest for parser/layout tests. Depend on `mermaid` for types only (`^11`, matching Obsidian's bundled major); nothing from Mermaid is bundled at runtime.
+- **No cloud, no CDN.** Everything runs locally in the vault.
+- **Keep `packages/diagram` free of Obsidian imports.** Only `packages/obsidian-plugin` may import
+  from `obsidian`, so the diagrams work in any Mermaid 11 host.
+- **Diagrams are separate entities** (decided 2026-09-17). The note-text Greek features — automatic
+  tagging, the bake command, the reading-view post-processor, both glossaries — never read or write
+  inside fenced code blocks, Mermaid ones included. `mapOutsideCode` and the post-processor's skip
+  selector enforce it and a test asserts it. Do not propose extending them into diagram blocks.
+- **Never run the `obsidian` binary from a script**: it launches the GUI and blocks.
 
 ## Commands
 
 ```
 npm install                 # once; npm workspaces (packages/diagram, packages/obsidian-plugin)
-npm test                    # vitest: parser, layout, and a jsdom integration test through real Mermaid
-npx vitest run packages/diagram/test/parser.test.ts   # single test file
+npm test                    # vitest: parser, layout, jsdom runs through real Mermaid
+npx vitest run packages/diagram/test/parser.test.ts   # a single file
 npm run typecheck           # tsc --noEmit for both packages
-                            # plugin unit tests import 'obsidian' via the stub in packages/obsidian-plugin/test/obsidian-stub.ts (vitest alias)
-npm run build               # builds the plugin and copies it into test-vault/.obsidian/plugins/mermaid-bracket/
-npm run dev                 # esbuild watch mode, same copy step after each rebuild
+npm run build               # builds the plugin and copies it into test-vault/.obsidian/plugins/
+npm run dev                 # esbuild watch, same copy step
 ```
 
-`packages/diagram/demo/` renders the diagram outside Obsidian (see its README); bundle with esbuild, serve over HTTP, and `firefox --headless --screenshot` gives a quick visual check without launching Obsidian.
+Plugin unit tests import `obsidian` through the stub at `packages/obsidian-plugin/test/obsidian-stub.ts`
+(a vitest alias). `packages/diagram/demo/` renders diagrams outside Obsidian: bundle with esbuild,
+serve over HTTP, then `firefox --headless --screenshot` for a visual check. Firefox's `--screenshot`
+does not wait for top-level await, so a page that renders asynchronously needs the two-stage
+localStorage harness. After a rebuild, reload the plugin in `test-vault/`.
 
-Then open `test-vault/` in Obsidian and reload the plugin (or the app) after a rebuild. `test-vault/PoC.md` and `test-vault/Colossians 1_21-23.md` are the manual checks.
+Releases: in `packages/obsidian-plugin`, `npm version x.y.z` then `git push && git push --tags`. The
+tag must equal `manifest.json`'s version; the workflow checks it, runs tests and typecheck, builds,
+and attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release.
 
-## Architecture
+## Layout of the repository
 
-- `packages/diagram/src/index.ts` exports `bracketDiagram`, a Mermaid `ExternalDiagramDefinition` (`id`, `detector`, `loader`). Mermaid types are imported for type-checking only; nothing from Mermaid is bundled.
-- Pipeline per block: Mermaid strips frontmatter/comments and hands the title to `db.ts` → `parser.ts` builds a `BracketDocument` (columns, tree of `TreeNode`, rows keyed by verse ref; see `model.ts`) → `renderer.ts` creates foreignObject cells in the live SVG, measures their heights, calls `layout.ts` (pure geometry, unit-tested), then draws bars, arms, labels and stars.
-- `relationships.ts` holds the 18 relationships, their group (drives colour), and keyword/label aliases. `styles.ts` is the CSS Mermaid injects per diagram; colours are CSS custom properties.
-- `packages/obsidian-plugin/src/main.ts` is the whole adapter: `loadMermaid()` → `registerExternalDiagrams` → rerender open Markdown views.
-- Per-diagram options are `config <key> <value>` lines in the block body (`doc.options`), overriding `DEFAULT_LAYOUT` in `layout.ts`; `setBracketDefaults()` lets the host set vault-wide defaults. **Mermaid's frontmatter `config:` cannot carry them**: `sanitizeDirective` deletes every key absent from Mermaid's config schema, so a `bracket:` section is silently dropped. `coordinateArms` (`ends` default, `all` = Biblearc look), `fontSize` (sets `--bracket-font-size` on the root group; all text and row heights derive from it), and `useMaxWidth` (default **false**, unlike Mermaid: a shrunk text table is unreadable; the plugin CSS makes the container scroll sideways) are the main ones; the table is in `examples/Colossians_1_21-23.md`.
-- **Sentence diagram** lives in `packages/diagram/src/sentence/` and is exported from the same index. `parser.ts` builds a `SentenceDocument` (clauses → slots → members → hanger groups; `model.ts`). `layout.ts` is pure: it takes a `Measure` callback and returns line/text primitives (`Prim[]`), so tests use a fake measurer and the renderer (`renderer.ts`, native `<text>`, no foreignObject) just draws primitives and measures with a hidden probe. Layout rules (all checked against `SENTENCE_Colossians _1_1_8.pdf`): slots in fixed order with markers, the complement marker leaning back toward the subject (`\\`); the first terrace under a word is one long slant from the head line to the shelf foot (long when `gen` rows sit between), later terraces branch off a stem dropped from that foot with short slashes; `gen` chains are one text line under the head; forks stack members with the conjunction inside the fork triangle on a dotted line, subject forks converge rightward into the predicate marker, object-side forks open rightward; the base line runs only from the subject fork tip to the first rightward fork tip; appositives are members (`ApposMember`) that can carry hangers, and a compound appositive is a rightward fork opening from the `=`, placed right of the head's own terraces; slots are pushed right until their word boxes clear earlier slots' hangers; clauses are laid out at y=0 then dropped so content above the base line clears the previous clause. The plugin registers both diagrams and shares fontSize/useMaxWidth with `setSentenceDefaults()`.
-- Layout rules distilled from the Biblearc PDFs (all in `layout.ts`): a parent's arm attaches to a child bracket at the child's starred arm if any, else the bar midpoint; a coordinate bar's label sits in the widest gap between its arms; leaf arms end just left of the ref column; refs longer than `refWrapAt` wrap after the hyphen.
-- **Decision (2026-09-17): diagrams are separate entities.** The note-text features — automatic tagging, the bake command, the reading-view post-processor and both glossaries — must never read or write inside fenced code blocks, Mermaid ones included; `mapOutsideCode` and the post-processor's skip selector enforce this and a test asserts it. Tags inside a diagram are written by hand and rendered by the diagram itself. Do not propose extending these commands into diagram blocks.
-- **Greek morphology**: `morph.ts` holds the MorphGNT code dictionary (13 parts of speech, 8 parsing slots), derived from a full scan of the SBLGNT corpus — `scripts/scan-morphgnt.mjs` reproduces the counts from a checkout of github.com/morphgnt/sblgnt. `word^CODE` in any bracket cell or sentence word is stripped from the text and emitted as classes (`gk`, `gk-pos-…`, `gk-case-…`, …) plus `data-morph` and a tooltip: a `<span>` in HTML cells (both formatters), a `<tspan>` with a `<title>` child in sentence SVG. `docs/greek-morphology.css` is the user's snippet (their chosen HTML formats plus an SVG layer); the plugin ships no morphology styling of its own. **The SVG rules must stay scoped to `text.`/`tspan.` selectors**: bracket cells are HTML inside the diagram's own `<svg>`, so an `svg .gk-…` selector would hit them too and double up effects like `text-shadow` + `filter: drop-shadow`. Translations used: `background-color` → `paint-order: stroke fill` with a stroke halo, `text-shadow` → `filter: drop-shadow()`, `transform: skewX` → `font-style: oblique <angle>`; colour rules already set `fill` beside `color`, and font-weight, font-style and text-decoration work in both media unchanged. **Lookup**: `morph-lookup.ts` (diagram package, data-free) decodes the bundled index and resolves a word — exact spelling first, then the normalized table, then accent-folded — and `agreedCode` reduces candidate parses to the features they all share, returning null when even the part of speech differs. The data lives in `packages/obsidian-plugin/src/data/greek-data.ts`, generated by `scripts/build-greek-data.mjs` from a MorphGNT checkout plus Dodson's lexicon (surface and normalized form tables are kept separate: merging them collapses spellings the corpus distinguishes and silently costs precision). `greek.ts` wraps it: `tagGreekAsHtml` writes `<span>` markup straight into the note (honouring a hand-written `^CODE` over the lookup, never double-wrapping, skipping existing markup via `splitKeepingMarkup`) so formatting shows in editing view too, `stripGreekTags` undoes either form, `autoTagGreek` writes `^CODE` tags, `buildGlossary`/`renderGlossary` produce the vocabulary list (options: `sort` alphabetical or by frequency, `excludePos` to drop parts of speech — `FUNCTION_WORD_POS` is conjunctions and the article; the decision uses each lemma's dominant part of speech, stored as a sixth section in the generated data, rather than the ambiguous per-form codes), `wordInfo` feeds the lexicon into `setMorphInfoProvider` so tooltips gain lemma and gloss. Every piece has a settings toggle (`greekLookup`, `greekHoverGloss`, `greekGlossary`, glossary style/columns), and the two commands use `checkCallback` so they vanish from the palette when disabled. Outside diagrams, `packages/obsidian-plugin/src/markdown-morph.ts` does the same for note text: `tagMorphInElement` runs from a Markdown post-processor over reading-view markup (skipping `code, pre, svg, .bracket-cell, .gk`), and `bakeMorphTags` rewrites tags in the source as HTML spans for the "Convert Greek morphology tags to HTML" command (skips fenced blocks and inline code). Both are Obsidian-free and jsdom-tested.
-- Cell text goes through a `CellFormatter` (`formatter.ts`): `defaultFormatter` is the host-independent inline subset; `setCellFormatter()` swaps in another. The plugin's `obsidian-formatter.ts` pre-converts `|` and `{…}` to spans, then runs `MarkdownRenderer.render` (source path = active file, since Mermaid's draw hook has no note context). `draw` is async for this reason. `createInlineFormatter({ obmdColors: true })` adds Style Obmd colour keys (`=={r}…==`, `**{b}…**`), emitting that plugin's `cmk-*` classes so its CSS and colour settings apply in Obsidian, with fallback colours in `styles.ts`; in that mode `__{r}text__`/`__text__` are (coloured) underlines, an extension Style Obmd lacks; the plugin offers three modes: builtin, obmd, obsidian. DOMPurify under Mermaid's strict level keeps `strong/mark/span[class]` and `a.internal-link[data-href]` (covered by tests).
-- Export: right-click on a rendered diagram (`export-menu.ts`, capture-phase contextmenu listener) offers copy as PNG, copy SVG markup, save SVG/PNG to the vault's attachment folder. `svg-export.ts` (no Obsidian imports, jsdom-tested) clones the svg with namespaces, pixel size, resolved font family and Style Obmd variables inlined, **flattens every foreignObject cell into native `<text>` runs** using per-character client rects from the live DOM (`flattenCells`; keeps weight/style/colour/decoration and highlight rects), then rasterises via blob URL → Image → canvas. Flattening is required: Chromium taints a canvas drawn from an SVG containing foreignObject ("Tainted canvases may not be exported"), and office tools ignore foreignObject. Chromium's clipboard cannot hold image/svg+xml, hence markup-as-text. Verified in headless Firefox via the two-stage localStorage harness (Firefox's `--screenshot` does not wait for top-level await).
-- Vault-wide defaults come from the plugin settings tab (`packages/obsidian-plugin/src/settings.ts`) via `setBracketDefaults()`; `config` lines in a block override them.
-- Mermaid's `%%` comment lines are stripped before our parser sees the text, so cell text cannot start a line with `%%`.
+| Path | What it holds |
+|---|---|
+| `packages/diagram/src/` | `bracket` diagram: `parser.ts`, `layout.ts` (pure geometry), `renderer.ts`, `relationships.ts`, `formatter.ts`, `morph.ts`, `morph-lookup.ts` |
+| `packages/diagram/src/sentence/` | `sentence` diagram: same shape, native SVG text |
+| `packages/obsidian-plugin/src/` | the adapter: `main.ts`, `settings.ts`, `greek.ts`, `markdown-morph.ts`, `export-menu.ts`, `svg-export.ts`, `data/greek-data.ts` (generated) |
+| `docs/reference/` | the Biblearc sheets converted to Markdown, with live diagrams |
+| `docs/greek-morphology.css` | the user's morphology stylesheet (HTML rules plus an SVG layer) |
+| `examples/` | target PDFs from Biblearc and the transcribed fixtures |
+| `documents/` | the source PDFs and the sentence-diagramming research doc |
+| `scripts/` | `build-greek-data.mjs`, `scan-morphgnt.mjs` |
+| `test-vault/` | an Obsidian vault for manual checks; the build installs the plugin into it |
+
+## The bracket diagram
+
+Pipeline: Mermaid strips frontmatter and comments and hands the title to `db.ts` → `parser.ts` builds
+a `BracketDocument` (columns, a tree of `TreeNode`, rows keyed by verse reference) → `renderer.ts`
+creates foreignObject cells in the live SVG, measures them, calls `layout.ts`, then draws bars, arms,
+labels and stars.
+
+Layout rules distilled from the Biblearc PDFs: a parent's arm attaches to a child bracket at the
+child's starred arm if any, else the bar midpoint; a coordinate bar's label sits in the widest gap
+between its arms; leaf arms end just left of the reference column; references longer than `refWrapAt`
+wrap after the hyphen.
+
+Per-diagram options are `config <key> <value>` lines in the block body, overriding `DEFAULT_LAYOUT`.
+**Mermaid's frontmatter `config:` cannot carry them**: `sanitizeDirective` deletes every key absent
+from Mermaid's own schema, so a `bracket:` section is silently dropped. The main options are
+`coordinateArms` (`ends` default, `all` for the Biblearc look), `fontSize` and `useMaxWidth` (default
+**false**, unlike Mermaid, because a shrunk text table is unreadable; the plugin CSS scrolls the
+container sideways instead). The full table is in `examples/Colossians_1_21-23.md`.
+
+Cell text goes through a `CellFormatter`. `defaultFormatter` is the host-independent inline subset;
+the plugin's `obsidian-formatter.ts` pre-converts `|` and `{…}` to spans and then runs
+`MarkdownRenderer.render`, which is why `draw` is async. `createInlineFormatter({ obmdColors: true })`
+adds Style Obmd colour keys and, as an extension that plugin lacks, `__{r}text__` underlines. Three
+modes: builtin, obmd, obsidian.
+
+Known leftovers: a star on a top-level bracket is parsed but not drawn; the arm attachment point is an
+approximation; bilateral renders generically with no special glyph.
+
+## The sentence diagram
+
+`parser.ts` builds a `SentenceDocument` (clauses → slots → members → hanger groups). `layout.ts` is
+pure: it takes a `Measure` callback and returns line and text primitives, so tests use a fake measurer
+and `renderer.ts` only draws primitives, measuring with a hidden probe. Text is native `<text>` and
+`<tspan>`, never foreignObject.
+
+Keywords: `clause` (`+ CONJ` joins the previous one), `conj`, `verse`, `key`, the slots `subj` `verb`
+`obj` `obj2` `comp`, `=` appositives, the hangers `mod` `prep` `gen` `part` `inf` `rel` `sub`, the
+slot filler `stilt`, and `voc`/`abs`. Any of them takes `+ CONJ` to fork. `part`/`inf` accept a
+trailing `(Label)` and carry their own complements; `inf` puts an indented `subj` before its double
+bar; `rel ROLE TEXT` names the slot its pronoun fills.
+
+Layout rules, all checked against `SENTENCE_Colossians _1_1_8.pdf`:
+
+- Slots run in fixed order with their markers, the complement marker leaning back toward the subject.
+- The first terrace under a word hangs on one long slant; later ones branch off a stem dropped from
+  that foot. A terrace that follows a genitive chain is set **beside** the chain, not below it.
+- `gen` chains are one text line under the head; an appositive of a genitive drops to the next row.
+- Forks stack members with the conjunction inside the triangle on a dotted line. Subject forks
+  converge rightward into the predicate marker; object-side forks open rightward. The base line runs
+  only from the subject fork tip to the first rightward fork tip.
+- Verbals (`part`, `inf`) hang on a vertical stem — one stem for all of them — each on its own shelf,
+  with the grey label beneath.
+- **Subordinate and relative clauses are deferred.** `layoutHangers` collects them into
+  `Sub.deferred`; every stage must forward that list alongside prims, boxes and verses, or the clause
+  silently disappears. `layoutClause` then places them below everything it owns and draws the slant or
+  the dashed link back to the anchor.
+- Slots are pushed right until their boxes clear earlier slots' hangers; clauses are laid out at y=0
+  then dropped so content above the base line clears the previous clause.
+
+Presentation: `key NAME COLOUR LABEL` plus `word@NAME` colours referents and draws the key top right.
+The colour is written as an inline `style`, because the injected stylesheet's `fill` beats a
+presentation attribute. Inline marks (`**`, `*`, `~~`, `==`) become tspan classes and are stripped
+from the measured text. `config style sowell` puts a preposition on the slant with an object marker.
+
+Four of the six Biblearc exports have a transcribed fixture. What remains is transcription, not code.
+Against the exports, the differences left are proportion and the author's hand placement.
+
+## Greek morphology
+
+`morph.ts` holds the MorphGNT code dictionary (13 parts of speech, 8 parsing slots), derived from a
+full scan of the SBLGNT corpus; `scripts/scan-morphgnt.mjs` reproduces the counts. `word^CODE` in a
+bracket cell, a sentence word or ordinary note text is stripped from the text and emitted as classes
+(`gk`, `gk-pos-…`, `gk-case-…`) plus `data-morph` and a tooltip: a `<span>` in HTML, a `<tspan>` with
+a `<title>` child in sentence SVG. The four pronoun classes also carry `gk-pos-pronoun`. The corpus
+never marks person on a pronoun, so first, second and third person are only reachable via
+`data-lemma`.
+
+`morph-lookup.ts` (data-free) decodes the bundled index and resolves a word: exact spelling, then the
+normalized table, then accent-folded. `agreedCode` reduces candidate parses to the features they all
+share and returns null when even the part of speech differs, which is why `καί` is never tagged.
+
+The data is `packages/obsidian-plugin/src/data/greek-data.ts`, generated by `scripts/build-greek-data.mjs`
+from a MorphGNT checkout plus Dodson's lexicon (CC BY-SA and CC0). Surface and normalized form tables
+are kept **separate**: merging them collapses spellings the corpus distinguishes and silently costs
+precision. A sixth section stores each lemma's dominant part of speech, which is how the frequency
+glossary drops conjunctions and the article.
+
+`greek.ts` wraps it: `autoTagGreek` writes `^CODE` tags, `tagGreekAsHtml` writes `<span>` markup so
+formatting shows in editing view too (honouring a hand-written code over the lookup and never
+double-wrapping), `stripGreekTags` undoes either, `buildGlossary`/`renderGlossary` produce the
+vocabulary list, `wordInfo` feeds the lexicon into `setMorphInfoProvider` for tooltips. Every piece
+has a settings toggle and the commands use `checkCallback`, so they vanish from the palette when off.
+`markdown-morph.ts` does the same for note text.
+
+`docs/greek-morphology.css` is the user's stylesheet. **Its SVG rules must stay scoped to `text.` and
+`tspan.` selectors**: bracket cells are HTML inside the diagram's own `<svg>`, so an `svg .gk-…`
+selector would match them too and double up effects. Translations used: `background-color` →
+`paint-order: stroke fill` with a stroke halo, `text-shadow` → `filter: drop-shadow()`,
+`transform: skewX` → `font-style: oblique <angle>`.
+
+## Export
+
+Right-click a rendered diagram: copy as PNG, copy SVG markup, save either to the vault.
+`svg-export.ts` clones the SVG with namespaces, pixel size, resolved font family and Style Obmd
+variables inlined, then **flattens every foreignObject cell into native `<text>` runs** using
+per-character client rects. Flattening is required: Chromium taints a canvas drawn from an SVG
+containing foreignObject, and office tools ignore foreignObject entirely. Chromium's clipboard cannot
+hold `image/svg+xml`, hence markup-as-text.
 
 ## What "bracketing" is
 
-Bracketing is a Bible-study method (from Biblearc) that splits a passage into numbered propositions (e.g. `21-22a`, `22b`, `23a`) and joins them with nested brackets, each labelled with one of **18 logical relationships**. Relationships fall into four groups:
+A Bible-study method (Biblearc) that splits a passage into numbered propositions and joins them with
+nested brackets, each labelled with one of 18 logical relationships in four families:
 
-- **Coordinate**: Series (S), Progression (P), Alternative (A)
-- **Support by Distinct Statement**: Ground (G), Inference (∴), Bilateral (BL), Action-Result (Ac/Res), Action-Purpose (Ac/Pur), Conditional (If/Th), Temporal (T), Locative (L)
-- **Support by Restatement**: Action-Manner (Ac/Mn), Comparison (Cf), Negative-Positive (-/+), Idea-Explanation (Id/Exp), Question-Answer (Q/A)
-- **Support by Contrary Statement**: Concessive (Csv), Situation-Response (Sit/R)
+- **Coordinate** (green): Series `S`, Progression `P`, Alternative `A`
+- **Support by distinct statement** (red): `G` `∴` `BL` `Ac/Res` `Ac/Pur` `If/Th` `T` `L`
+- **Support by restatement** (blue): `Ac/Mn` `Cf` `-/+` `Id/Exp` `Q/A`
+- **Support by contrary statement** (orange): `Csv` `Sit/R`
 
-Coordinate relationships join 2+ equal siblings under one label. Subordinate relationships pair exactly two halves, each with its own sub-label (e.g. `Ac` over `Pur`), and one half is the **main point**, marked with a star (★). BL is Ground + Inference combined around a middle proposition.
+Coordinate relationships join two or more equals under one label. Subordinate ones pair exactly two
+halves, each with its own label, one of which is the main point and carries a star. `BL` is Ground and
+Inference combined around a middle proposition. Full definitions:
+`docs/reference/18-logical-relationships.md`.
 
 ## Reference material
 
-`docs/reference/` — readable versions of the Biblearc sheets: the 18 relationships (one live diagram each), the English and Greek conjunction tables (transcribed from the PDFs by word position, see the note below), and a practice set of example sentences. Definitions and example sentences are written fresh rather than copied, so the pages can sit in a public repo; the conjunction data is factual and transcribed as is. `examples.test.ts` parses every diagram on these pages, so they cannot drift from the parser.
-
-`documents/sentence-diagramming-research.md` — design doc for the planned `sentence` diagram (Reed–Kellogg).
-
-`documents/` — the authoritative definitions for bracketing; consult these before inventing labels or abbreviations:
-- `The18LogicalRelationshipsEng.pdf` — definitions, abbreviations, conjunctions, and a Bible example for each relationship.
-- `Englishcongunctionsbracketingcheetsheetnewlogo.pdf` / `Greekconjunctions...pdf` — conjunction → relationship lookup tables (note "and" is ambiguous and can map to any relationship).
-- `Logicalrelationshipexamplesentencesnewlogo.pdf` — plain-English example sentence per relationship (birthday-party theme), useful for tests and docs.
-
-`examples/Colossians_1_21-23.md` — the input syntax, worked for one pericope and the whole-book outline, with the option and inline-formatting tables. `examples/Colossians_3_1-4.md` — richer fixture (five-deep nesting, stacked labels). `examples/Sentence_Colossians_1_1-2.md` — sentence-diagram fixture and 4a keyword table (transcribed from the Biblearc export). `examples.test.ts` parses every block in these files, so they must stay valid.
-
-`examples/SENTENCE_Colossians*.pdf` — Biblearc Diagram (sentence diagram) exports, target for the planned `sentence` diagram; `pdftotext` works on these.
-
-`examples/Colossians*.pdf` — target output for `bracket`. These are Biblearc jsPDF exports of Colossians brackets (one per pericope plus a whole-book outline in `Colossians.pdf`). They have **no text layer**; view them as images (the `Read` tool renders PDF pages). Conventions visible in them:
-- Layout: bracket tree on the left, verse references in a column, then one or more text columns (e.g. NA28 Greek + ESV, or a single "MINE" summary column) in a bordered table, one row per proposition.
-- Brackets are colour-coded by group: coordinate = green, distinct statement = red, restatement = blue. (Contrary-statement colour is not shown in the examples.)
-- Labels sit on the bracket's vertical bar (coordinate) or on each horizontal arm (subordinate); the star marks the main-point arm. Nesting is arbitrary depth; a whole-book bracket nests pericope brackets.
-- Verse refs use ranges and letter suffixes (`1-5`, `23b`); whole-book views drop the chapter number in the ref column.
-
-`pdftotext` works on `documents/*.pdf` (layout is two-column, so text interleaves); it returns nothing for `examples/*.pdf`.
+- `docs/reference/` — the four Biblearc sheets converted to Markdown: the 18 relationships with a live
+  diagram each, the English (62) and Greek (64) conjunction tables, and the example sentences. The
+  conjunction tables were parsed from the PDFs **by word position**, because the sheets centre each
+  headword across its rows and a plain text dump binds rows to the wrong word. `examples.test.ts`
+  parses every diagram on these pages, so they cannot drift from the parser.
+- `documents/sentence-diagramming-research.md` — the design doc: shape catalogue with Sowell's names,
+  syntax proposal, layout sketch.
+- `documents/*.pdf` — the original sheets. `pdftotext` works on them, but drops accented Greek and the
+  fi/fl ligatures, which is why the converted pages restore them by hand.
+- `examples/Colossians*.pdf` — bracket targets. No text layer; view them as images.
+- `examples/SENTENCE_Colossians*.pdf` — sentence targets. These do have a text layer.
+- `examples/*.md` — the transcribed fixtures, which double as the syntax reference.

@@ -7,7 +7,8 @@ Custom [Mermaid](https://mermaid.js.org) diagram types for Bible study, delivere
   multi-column text (e.g. Greek beside English).
 - **`sentence`** — Greek sentence diagrams in the Reed–Kellogg tradition as adapted for the New Testament
   (KoineWorks / Biblearc "Diagram"): base lines with predicate, object and complement markers, terraces,
-  slash genitives, appositives, forks. Under construction; see the roadmap in `CLAUDE.md`.
+  slash genitives, appositives, forks, participles and infinitives with their semantic labels,
+  subordinate and relative clauses, substantival clauses on a standard, and a referent colour key.
 
 Both render inside ordinary ```` ```mermaid ```` code blocks. The plugin registers them on Obsidian's own
 bundled Mermaid, so nothing is fetched from the network and no external service is involved.
@@ -45,16 +46,32 @@ Ac/Pur
 **Reference pages** for the method itself are in [`docs/reference/`](docs/reference/index.md): the eighteen
 relationships with a diagram each, and the English and Greek conjunction lists.
 
-Syntax reference and worked examples: `examples/Colossians_1_21-23.md` (bracket) and
-`examples/Sentence_Colossians_1_1-2.md` (sentence). Target renderings from Biblearc are the PDFs in
+Syntax reference and worked examples: `examples/Colossians_1_21-23.md` and `examples/Colossians_3_1-4.md`
+for brackets; `examples/Sentence_Colossians_1_1-2.md`, `_1_3-4.md`, `_1_15-16.md` and `_2_6-7.md` for
+sentence diagrams, each transcribed from the matching Biblearc export. Those exports are the PDFs in
 `examples/`.
 
 ## Features
 
-- Nested brackets to any depth, forests, per-arm labels and main-point stars, group colours
-- Text cells with a built-in inline formatting subset, optional Style Obmd colour keys, or full Obsidian Markdown
-- Per-diagram `config` lines and a settings tab for vault-wide defaults (font size, column width, arm style, width behaviour)
-- Right-click export: copy as PNG, copy SVG markup, save SVG/PNG to the vault (cells are flattened to plain SVG text so the files open in Word, Inkscape and browsers)
+**Bracket diagrams.** Nesting to any depth, forests, per-arm labels and main-point stars, the four family
+colours, a verse-reference column, and several text columns for translations side by side.
+
+**Sentence diagrams.** The base line with its markers, terraces, slash genitives, appositives, forks,
+participles and infinitives with their grey semantic labels, relative clauses with a dashed link to the
+antecedent, subordinate clauses on a labelled slant, substantival clauses raised on a standard, vocatives
+and absolutes on a floating shelf, and clauses joined by a conjunction.
+
+**Text.** A built-in inline formatting subset, optional Style Obmd colour keys, or full Obsidian Markdown
+inside bracket cells; inline marks inside sentence words.
+
+**Greek.** Morphology tags in diagrams and in ordinary notes, automatic tagging from the bundled corpus,
+hover glosses, and two glossary commands.
+
+**Settings and options.** Per-diagram `config` lines and a settings tab for vault-wide defaults: font size,
+column width, arm style, width behaviour, the cell formatter, and every Greek feature.
+
+**Export.** Right-click a diagram to copy it as PNG, copy its SVG markup, or save either to the vault. Cells
+are flattened to plain SVG text, so the files open in Word, Inkscape and browsers alike.
 
 ## Greek morphology
 

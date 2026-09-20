@@ -1,6 +1,6 @@
 # Colossians 1:15–16 (sentence diagram)
 
-Target: page 1 of `SENTENCE_Colossians _1_9_20.pdf`. Shows phase 4c: a referent colour key, words
+Target: page 1 of `SENTENCE_Colossians _1_9_20.pdf`. Shows the referent colour key, words
 tagged to it, and inline emphasis inside a word.
 
 ```mermaid
