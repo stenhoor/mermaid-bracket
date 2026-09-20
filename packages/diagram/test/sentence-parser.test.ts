@@ -124,4 +124,16 @@ verb  Εὐχαριστοῦμεν
     expect(() => parseSentence('sentence\nverb a\n  part b\n    verb c\n')).toThrow(/itself the verb/);
     expect(() => parseSentence('sentence\nverb a\n  mod b\n    obj c\n')).toThrow(/only be nested under/);
   });
+
+  it('opens a relative clause and flags its pronoun', () => {
+    const doc = parseSentence('sentence\nverb ἀκούσαντες\nobj τὴν ἀγάπην\n  rel obj ἣν\n    verb ἔχετε\n      prep εἰς τοὺς ἁγίους\n');
+    const rel = doc.clauses[0]!.slots.obj!.members[0]!.hangers[0]!;
+    expect(rel.kind).toBe('rel');
+    const clause = rel.members[0]!.clause!;
+    expect(clause.slots.obj!.members[0]).toMatchObject({ relative: true });
+    expect(clause.slots.obj!.members[0]!.word.text).toBe('ἣν');
+    expect(clause.slots.verb!.members[0]!.word.text).toBe('ἔχετε');
+    expect(clause.slots.verb!.members[0]!.hangers[0]!.kind).toBe('prep');
+    expect(() => parseSentence('sentence\nverb v\nobj x\n  rel ἣν\n')).toThrow(/needs the pronoun/);
+  });
 });

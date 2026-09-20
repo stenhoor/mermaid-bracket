@@ -216,3 +216,21 @@ obj τῷ θεῷ
     expect(appos.y).toBeGreaterThan(chain.y);
   });
 });
+
+describe('relative clauses', () => {
+  it('sets the clause below its antecedent and links the pronoun with a dashed line', () => {
+    const doc = parseSentence('sentence\nverb v\nobj τὴν ἀγάπην\n  rel obj ἣν\n    verb ἔχετε\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const head = find(l.prims, 'τὴν ἀγάπην');
+    const pronoun = find(l.prims, 'ἣν');
+    const verb = find(l.prims, 'ἔχετε');
+    expect(pronoun.y).toBeGreaterThan(head.y);
+    expect(verb.x).toBeLessThan(pronoun.x); // the clause has its own base line
+    const link = lines(l.prims).find((x) => x.style === 'dotted')!;
+    expect(link).toBeDefined();
+    expect(link.y2).toBeGreaterThan(link.y1); // runs down from the antecedent to the pronoun
+    expect(Math.abs(link.x2 - pronoun.x)).toBeLessThan(DEFAULT_SENTENCE.pad * 2);
+    // The clause carries its own base line, so a base-style line exists below the head.
+    expect(lines(l.prims).filter((x) => x.style === 'base').length).toBe(2);
+  });
+});

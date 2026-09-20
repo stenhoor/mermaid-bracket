@@ -4,7 +4,7 @@ export type SlotRole = 'subj' | 'verb' | 'obj' | 'obj2' | 'comp';
 export const SLOT_ORDER: readonly SlotRole[] = ['subj', 'verb', 'obj', 'obj2', 'comp'];
 
 /** Hanger kinds. (stilt, sub, rel, voc and abs are still to come.) */
-export type HangerKind = 'mod' | 'prep' | 'gen' | 'part' | 'inf';
+export type HangerKind = 'mod' | 'prep' | 'gen' | 'part' | 'inf' | 'rel';
 
 /** `part` and `inf` are verbal: they hang from a word but carry complements of their own. */
 export const VERBAL_KINDS: readonly HangerKind[] = ['part', 'inf'];
@@ -38,6 +38,8 @@ export interface HangerMember {
   /** Complements of a participle or infinitive: its own object, second accusative, complement,
    * and for an infinitive the accusative subject that stands before the marker. */
   slots?: Partial<Record<SlotRole, Slot>>;
+  /** The clause of a `rel` hanger: its own base line, linked back by a dashed line. */
+  clause?: Clause;
 }
 
 export interface HangerGroup {
@@ -49,6 +51,8 @@ export interface SlotMember {
   word: Word;
   conj?: string;
   hangers: HangerGroup[];
+  /** Set on the relative pronoun of a relative clause; the dashed link starts here. */
+  relative?: boolean;
 }
 
 export interface Slot {

@@ -114,10 +114,13 @@ export function layoutSentence(doc: SentenceDocument, measure: Measure, cfg: Sen
 interface ClauseOut {
   prims: Prim[];
   verses: VerseList;
+  boxes?: Box[];
   right: number;
   /** Highest (smallest y) content, relative to the base line. */
   top: number;
   bottom: number;
+  /** Where the relative pronoun sits, when this clause is a relative one. */
+  relAnchor?: { x: number; y: number };
 }
 
 function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0: number, baseY: number): ClauseOut {
@@ -137,6 +140,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
 
   const roles = SLOT_ORDER.filter((r) => clause.slots[r]);
   let top = baseY - fs * 1.4;
+  let relAnchor: { x: number; y: number } | undefined;
   const drawMarker = (mx: number, role: SlotRole): void => {
     const h = fs * 1.15;
     if (role === 'verb') prims.push({ kind: 'line', x1: mx, y1: baseY - h, x2: mx, y2: baseY + fs * 0.6, style: 'marker' });
@@ -163,6 +167,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
       x += cfg.pad * 1.25 + (role === 'comp' ? fs * 0.9 : 0);
     }
     const sub = layoutSlot(slot, measure, cfg, role === 'subj');
+    const relMember = slot.members.findIndex((mm) => mm.relative);
     sub.slotWidth = Math.max(sub.slotWidth, fs * 2.6, slot.members[0]!.word.text ? 0 : fs * 0.5 + cfg.slant + cfg.pad * 1.5);
     // Push this slot right until its word boxes clear everything already placed beneath the line.
     let dx = x;
@@ -176,6 +181,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
       if (sub.fork.leftward) lineStart = x + sub.fork.tipX;
       else if (lineEnd === null) lineEnd = x + sub.fork.tipX;
     }
+    if (relMember >= 0) relAnchor = { x: x + cfg.pad, y: baseY - fs * 0.3 };
     prims.push(...sub.prims.map((p) => shiftPrim(p, x, baseY)));
     verses.push(...sub.verses.map((v) => ({ y: v.y + baseY, text: v.text })));
     placed.push(...sub.boxes.map((b) => shift(b, x, baseY)));
@@ -194,7 +200,9 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
   }
   const end = lineEnd ?? Math.max(x + cfg.pad, right);
   prims.unshift({ kind: 'line', x1: lineStart, y1: baseY, x2: end, y2: baseY, style: 'base' });
-  return { prims, verses, right: Math.max(right, end), top, bottom };
+  const out: ClauseOut = { prims, verses, right: Math.max(right, end), top, bottom };
+  if (relAnchor) out.relAnchor = relAnchor;
+  return out;
 }
 
 interface SlotSub extends Sub {
@@ -219,7 +227,7 @@ function layoutSlot(slot: { members: SlotMember[] }, measure: Measure, cfg: Sent
   }
   const fs = cfg.fontSize;
   const conjW = Math.max(0, ...slot.members.map((m) => (m.conj ? measure(m.conj, 'conj') : 0)));
-  const fd = Math.max(fs * 3.6, conjW * 1.6 + 16);
+  const fd = Math.max(fs * 4.6, conjW * 1.9 + 18);
   const members = slot.members.map((m) => layoutWordOnLine(m.word, m.hangers, measure, cfg, 0, 0, cfg.slant * 0.5));
   const shelfYs = forkShelfYs(members, fs);
   const prims: Prim[] = [];
@@ -340,7 +348,7 @@ function layoutWordOnLine(word: Word, hangers: HangerGroup[], measure: Measure, 
       apposForkX = x;
       const laid = word.appos.map((a) => layoutWordOnLine(a.word, a.hangers, measure, cfg, 0, 0, cfg.slant * 0.5));
       const conjW = Math.max(0, ...word.appos.map((a) => (a.conj ? measure(a.conj, 'conj') : 0)));
-      const fd = Math.max(fs * 3.6, conjW * 1.6 + 16);
+      const fd = Math.max(fs * 4.6, conjW * 1.9 + 18);
       const fork = forkRight(laid, word.appos.map((a) => a.conj), forkShelfYs(laid, fs), fd, fs);
       prims.push(...fork.prims.map((p) => shiftPrim(p, x, oy)));
       boxes.push(...fork.boxes.map((b) => shift(b, x, oy)));
@@ -464,7 +472,7 @@ function layoutVerbal(
       layoutWordOnLine(mm.word, mm.hangers, measure, cfg, 0, 0, cfg.slant * 0.5),
     );
     const conjW = Math.max(0, ...slot!.members.map((mm) => (mm.conj ? measure(mm.conj, 'conj') : 0)));
-    const fd = Math.max(fs * 3.6, conjW * 1.6 + 16);
+    const fd = Math.max(fs * 4.6, conjW * 1.9 + 18);
     // Members are stacked around the shelf, so the first sits above the line rather than on it.
     const shelfYs = forkShelfYs(laid, fs);
     const fork = forkRight(laid, slot!.members.map((mm) => mm.conj), shelfYs, fd, fs);
@@ -558,6 +566,32 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         x = ex + cfg.pad * 0.5;
       }
       cursor = subBottom + cfg.gap;
+      continue;
+    }
+
+    if (g.kind === 'rel') {
+      // A relative clause has a base line of its own, set below and slightly right of the word it
+      // modifies, with a dashed line from its pronoun back up to that word.
+      for (const m of g.members) {
+        if (!m.clause) continue;
+        const cx = ax + cfg.slant * 1.5;
+        const cy = cursor + fs * 2.2;
+        const c = layoutClause(m.clause, measure, cfg, 0, 0);
+        prims.push(...c.prims.map((p) => shiftPrim(p, cx, cy)));
+        verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
+        if (c.relAnchor) {
+          prims.push({
+            kind: 'line',
+            x1: ax,
+            y1: ay,
+            x2: cx + c.relAnchor.x,
+            y2: cy + c.relAnchor.y - fs * 0.9,
+            style: 'dotted',
+          });
+        }
+        right = Math.max(right, cx + c.right);
+        cursor = cy + c.bottom + cfg.gap;
+      }
       continue;
     }
 

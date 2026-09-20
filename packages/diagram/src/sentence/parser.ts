@@ -5,9 +5,9 @@ import type { ApposMember, Clause, HangerGroup, HangerKind, HangerMember, Senten
 const KEYWORD_RE = /^\s*sentence\s*$/;
 const CONFIG_RE = /^\s*config\s+([A-Za-z][\w.]*)\s+(.+?)\s*$/;
 const LINE_RE = /^(\s*)(\S+)(?:\s+(.*?))?\s*$/;
-const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen', 'part', 'inf']);
+const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen', 'part', 'inf', 'rel']);
 const SLOT_ROLES = new Set<string>(SLOT_ORDER);
-const NOT_YET = new Set(['stilt', 'sub', 'rel', 'voc', 'abs']);
+const NOT_YET = new Set(['stilt', 'sub', 'voc', 'abs']);
 /** A trailing "(Temporal)" on a participle or infinitive. */
 const LABEL_RE = /\s*\(([^)]+)\)\s*$/;
 
@@ -18,6 +18,8 @@ interface Frame {
   word: Word | null;
   /** Set on a `part`/`inf` frame: slots indented under it are its own complements. */
   verbal?: HangerMember;
+  /** Set on a `rel` frame: slots indented under it belong to that clause. */
+  relClause?: Clause;
 }
 
 export function parseSentence(text: string): SentenceDocument {
@@ -116,15 +118,17 @@ export function parseSentence(text: string): SentenceDocument {
 
     if (SLOT_ROLES.has(key)) {
       const role = key as SlotRole;
-      const c = clause ?? newClause();
-      const verbal = parent?.verbal;
-      if (!verbal && parent && parent.hangers !== null && stack.length > 0) {
-        throw new SentenceParseError(`slot \`${role}\` can only be nested under \`part\` or \`inf\``, lineNo);
+      const owner = parent?.relClause ?? clause ?? newClause();
+      const c = owner;
+      const verbal = parent?.relClause ? undefined : parent?.verbal;
+      if (!verbal && !parent?.relClause && parent && parent.hangers !== null && stack.length > 0) {
+        throw new SentenceParseError(`slot \`${role}\` can only be nested under \`part\`, \`inf\` or \`rel\``, lineNo);
       }
       if (verbal && role === 'verb') {
         throw new SentenceParseError('a participle or infinitive is itself the verb', lineNo);
       }
       const slots = verbal ? (verbal.slots ??= {}) : c.slots;
+      const inRelative = parent?.relClause !== undefined;
       let slot = slots[role];
       if (slot && !conj) throw new SentenceParseError(`slot \`${role}\` already set; use \`+ conj\` for a compound`, lineNo);
       if (!slot) {
@@ -135,8 +139,9 @@ export function parseSentence(text: string): SentenceDocument {
       const member: SlotMember = { word, hangers: [] };
       if (conj) member.conj = conj;
       slot.members.push(member);
-      // A clause-level slot starts a new frame stack; a verbal's own slot nests inside it.
-      if (verbal) stack.push({ indent, hangers: member.hangers, word });
+      // A clause-level slot starts a new frame stack; slots of a verbal or of a relative clause
+      // nest inside the frame that owns them.
+      if (verbal || inRelative) stack.push({ indent, hangers: member.hangers, word });
       else stack = [{ indent, hangers: member.hangers, word }];
       continue;
     }
@@ -151,6 +156,18 @@ export function parseSentence(text: string): SentenceDocument {
       const last = groups[groups.length - 1];
       const member: HangerMember = { word, hangers: [] };
       if (verbalKind && labelText) member.label = labelText;
+      if (kind === 'rel') {
+        // `rel ROLE TEXT`: the pronoun fills one slot of a clause of its own.
+        const parts = body.split(/\s+/);
+        const role = parts.shift() as SlotRole | undefined;
+        if (!role || !SLOT_ROLES.has(role)) {
+          throw new SentenceParseError('`rel` needs the pronoun\'s role, e.g. `rel obj ἣν`', lineNo);
+        }
+        const pronoun = makeWord(parts.join(' '));
+        if (!pronoun.text) throw new SentenceParseError('`rel` needs the relative pronoun', lineNo);
+        member.word = pronoun;
+        member.clause = { slots: { [role]: { role, members: [{ word: pronoun, hangers: [], relative: true }] } } };
+      }
       if (conj) {
         if (!last || last.kind !== kind) throw new SentenceParseError(`\`${kind} + …\` has no previous \`${kind}\` to join`, lineNo);
         member.conj = conj;
@@ -163,6 +180,7 @@ export function parseSentence(text: string): SentenceDocument {
       }
       const frame: Frame = { indent, hangers: member.hangers, word };
       if (verbalKind) frame.verbal = member;
+      if (member.clause) frame.relClause = member.clause;
       stack.push(frame);
       continue;
     }
