@@ -234,3 +234,50 @@ describe('relative clauses', () => {
     expect(lines(l.prims).filter((x) => x.style === 'base').length).toBe(2);
   });
 });
+
+describe('subordinate clauses, stilts and joins', () => {
+  it('hangs a subordinate clause on a labelled slant', () => {
+    const doc = parseSentence('sentence\nverb περιπατεῖτε\n  sub καθὼς\n    verb ἐδιδάχθητε\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const head = find(l.prims, 'περιπατεῖτε');
+    const child = find(l.prims, 'ἐδιδάχθητε');
+    const label = find(l.prims, 'καθὼς');
+    expect(child.y).toBeGreaterThan(head.y);
+    expect(child.x).toBeGreaterThan(head.x);
+    const slant = lines(l.prims).find((x) => x.style === 'line' && x.x2 > x.x1 && x.y2 > x.y1 + 10)!;
+    expect(slant).toBeDefined();
+    expect(label.y).toBeGreaterThan(head.y);
+    expect(label.y).toBeLessThan(child.y);
+  });
+
+  it('raises a stilted clause above the base line on a stem', () => {
+    const doc = parseSentence('sentence\nverb Θέλω\nobj stilt\n  verb εἰδέναι\n  subj ὑμᾶς\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const base = lines(l.prims).find((x) => x.style === 'base')!;
+    const raised = find(l.prims, 'εἰδέναι');
+    expect(raised.y).toBeLessThan(base.y1); // above the base line
+    const stem = lines(l.prims).find((x) => x.style === 'line' && x.x1 === x.x2 && x.y2 < x.y1)!;
+    expect(stem).toBeDefined();
+  });
+
+  it('joins two clauses with a dotted link carrying the conjunction', () => {
+    const doc = parseSentence('sentence\nverb a\nclause + καὶ\n  verb b\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const bases = lines(l.prims).filter((x) => x.style === 'base');
+    expect(bases).toHaveLength(2);
+    const dotted = lines(l.prims).find((x) => x.style === 'dotted' && x.x1 === x.x2)!;
+    expect(dotted).toBeDefined();
+    expect(dotted.y1).toBeLessThan(dotted.y2);
+    const conj = texts(l.prims).find((t) => t.text === 'καὶ')!;
+    expect(conj.cls).toBe('conj');
+  });
+
+  it('puts a vocative on a shelf above the clause, linked by a dotted line', () => {
+    const doc = parseSentence('sentence\nvoc κύριε\nsubj Σὺ\nverb ἐθεμελίωσας\n');
+    const l = layoutSentence(doc, measure, { ...DEFAULT_SENTENCE, gutter: 0 });
+    const voc = find(l.prims, 'κύριε');
+    const subj = find(l.prims, 'Σὺ');
+    expect(voc.y).toBeLessThan(subj.y);
+    expect(lines(l.prims).some((x) => x.style === 'dotted' && x.x1 === x.x2 && x.y2 > x.y1)).toBe(true);
+  });
+});

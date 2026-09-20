@@ -4,7 +4,7 @@ export type SlotRole = 'subj' | 'verb' | 'obj' | 'obj2' | 'comp';
 export const SLOT_ORDER: readonly SlotRole[] = ['subj', 'verb', 'obj', 'obj2', 'comp'];
 
 /** Hanger kinds. (stilt, sub, rel, voc and abs are still to come.) */
-export type HangerKind = 'mod' | 'prep' | 'gen' | 'part' | 'inf' | 'rel';
+export type HangerKind = 'mod' | 'prep' | 'gen' | 'part' | 'inf' | 'rel' | 'sub';
 
 /** `part` and `inf` are verbal: they hang from a word but carry complements of their own. */
 export const VERBAL_KINDS: readonly HangerKind[] = ['part', 'inf'];
@@ -38,8 +38,10 @@ export interface HangerMember {
   /** Complements of a participle or infinitive: its own object, second accusative, complement,
    * and for an infinitive the accusative subject that stands before the marker. */
   slots?: Partial<Record<SlotRole, Slot>>;
-  /** The clause of a `rel` hanger: its own base line, linked back by a dashed line. */
+  /** The clause of a `rel` or `sub` hanger: its own base line. */
   clause?: Clause;
+  /** The subordinating conjunction written beside a `sub` hanger's slant. */
+  conjLabel?: string;
 }
 
 export interface HangerGroup {
@@ -53,6 +55,9 @@ export interface SlotMember {
   hangers: HangerGroup[];
   /** Set on the relative pronoun of a relative clause; the dashed link starts here. */
   relative?: boolean;
+  /** `obj stilt`: the slot is filled by something raised on a standard — a clause of its own, or
+   * an infinitive or participle among the hangers. */
+  stilt?: { clause?: Clause };
 }
 
 export interface Slot {
@@ -63,6 +68,10 @@ export interface Slot {
 export interface Clause {
   /** Sentence-level conjunction drawn on the up-left slant (`conj οὖν`). */
   conj?: string;
+  /** Conjunction joining this clause to the previous one (`clause + καί`). */
+  join?: string;
+  /** Vocatives and absolutes, drawn on a floating shelf above the clause. */
+  floating?: { kind: 'voc' | 'abs'; word: Word }[];
   slots: Partial<Record<SlotRole, Slot>>;
   verse?: string;
 }

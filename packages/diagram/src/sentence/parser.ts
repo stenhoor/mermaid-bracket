@@ -5,9 +5,9 @@ import type { ApposMember, Clause, HangerGroup, HangerKind, HangerMember, Senten
 const KEYWORD_RE = /^\s*sentence\s*$/;
 const CONFIG_RE = /^\s*config\s+([A-Za-z][\w.]*)\s+(.+?)\s*$/;
 const LINE_RE = /^(\s*)(\S+)(?:\s+(.*?))?\s*$/;
-const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen', 'part', 'inf', 'rel']);
+const HANGER_KINDS = new Set<string>(['mod', 'prep', 'gen', 'part', 'inf', 'rel', 'sub']);
 const SLOT_ROLES = new Set<string>(SLOT_ORDER);
-const NOT_YET = new Set(['stilt', 'sub', 'voc', 'abs']);
+const NOT_YET = new Set<string>();
 /** A trailing "(Temporal)" on a participle or infinitive. */
 const LABEL_RE = /\s*\(([^)]+)\)\s*$/;
 
@@ -58,8 +58,19 @@ export function parseSentence(text: string): SentenceDocument {
     const rest = (m[3] ?? '').trim();
 
     if (key === 'clause') {
-      newClause();
-      if (rest) throw new SentenceParseError('`clause` takes no text in phase 4a', lineNo);
+      const c = newClause();
+      const { conj: jconj, body: jbody } = splitConj(rest);
+      if (jbody) throw new SentenceParseError('`clause` takes no text', lineNo);
+      if (jconj) {
+        if (doc.clauses.length < 2) throw new SentenceParseError('`clause + …` has no previous clause to join', lineNo);
+        c.join = jconj;
+      }
+      continue;
+    }
+    if (key === 'voc' || key === 'abs') {
+      const c = clause ?? newClause();
+      if (!rest) throw new SentenceParseError(`\`${key}\` needs text`, lineNo);
+      (c.floating ??= []).push({ kind: key, word: makeWord(rest) });
       continue;
     }
     if (key === 'verse') {
@@ -137,12 +148,19 @@ export function parseSentence(text: string): SentenceDocument {
         slots[role] = slot;
       }
       const member: SlotMember = { word, hangers: [] };
+      if (word.text === 'stilt') {
+        // `obj stilt`: the slot is filled by a clause or verbal standing on a standard.
+        member.word = makeWord('');
+        member.stilt = { clause: { slots: {} } };
+      }
       if (conj) member.conj = conj;
       slot.members.push(member);
       // A clause-level slot starts a new frame stack; slots of a verbal or of a relative clause
       // nest inside the frame that owns them.
-      if (verbal || inRelative) stack.push({ indent, hangers: member.hangers, word });
-      else stack = [{ indent, hangers: member.hangers, word }];
+      const slotFrame: Frame = { indent, hangers: member.hangers, word };
+      if (member.stilt?.clause) slotFrame.relClause = member.stilt.clause;
+      if (verbal || inRelative) stack.push(slotFrame);
+      else stack = [slotFrame];
       continue;
     }
 
@@ -156,6 +174,13 @@ export function parseSentence(text: string): SentenceDocument {
       const last = groups[groups.length - 1];
       const member: HangerMember = { word, hangers: [] };
       if (verbalKind && labelText) member.label = labelText;
+      if (kind === 'sub') {
+        // `sub CONJ`: a clause of its own, hung on a slant labelled with the conjunction.
+        if (!body) throw new SentenceParseError('`sub` needs its conjunction, e.g. `sub καθώς`', lineNo);
+        member.conjLabel = body;
+        member.word = makeWord('');
+        member.clause = { slots: {} };
+      }
       if (kind === 'rel') {
         // `rel ROLE TEXT`: the pronoun fills one slot of a clause of its own.
         const parts = body.split(/\s+/);

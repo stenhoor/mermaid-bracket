@@ -61,7 +61,7 @@ clause
     expect(() => parseSentence('sentence\nmod x\n')).toThrow(/line 2: `mod` must be indented under a word/);
     expect(() => parseSentence('sentence\nverb a\nverb b\n')).toThrow(/already set/);
     expect(() => parseSentence('sentence\nverb a\n  prep + καί b\n')).toThrow(/no previous `prep`/);
-    expect(() => parseSentence('sentence\nverb a\n  stilt\n')).toThrow(/not supported yet/);
+    expect(() => parseSentence('sentence\nverb a\n  rel ἣν\n')).toThrow(/needs the pronoun/);
     expect(() => parseSentence('sentence\nfoo a\n')).toThrow(SentenceParseError);
     expect(() => parseSentence('sentence\n')).toThrow(/no clause/);
   });
@@ -135,5 +135,36 @@ verb  Εὐχαριστοῦμεν
     expect(clause.slots.verb!.members[0]!.word.text).toBe('ἔχετε');
     expect(clause.slots.verb!.members[0]!.hangers[0]!.kind).toBe('prep');
     expect(() => parseSentence('sentence\nverb v\nobj x\n  rel ἣν\n')).toThrow(/needs the pronoun/);
+  });
+
+  it('parses subordinate clauses, stilts, floating shelves and joined clauses', () => {
+    const doc = parseSentence(`sentence
+clause
+  voc   κύριε
+  abs   αὐτοῦ ἐκπορευομένου
+  verb  περιπατεῖτε
+    sub   καθὼς
+      verb  ἐδιδάχθητε
+clause + καὶ
+  verb  Θέλω
+  obj   stilt
+    verb  εἰδέναι
+    subj  ὑμᾶς
+`);
+    const [first, second] = doc.clauses as [(typeof doc.clauses)[0], (typeof doc.clauses)[0]];
+    expect(first.floating!.map((f) => [f.kind, f.word.text])).toEqual([
+      ['voc', 'κύριε'],
+      ['abs', 'αὐτοῦ ἐκπορευομένου'],
+    ]);
+    const sub = first.slots.verb!.members[0]!.hangers[0]!;
+    expect(sub.kind).toBe('sub');
+    expect(sub.members[0]!.conjLabel).toBe('καθὼς');
+    expect(sub.members[0]!.clause!.slots.verb!.members[0]!.word.text).toBe('ἐδιδάχθητε');
+    expect(second.join).toBe('καὶ');
+    const stilt = second.slots.obj!.members[0]!;
+    expect(stilt.stilt!.clause!.slots.verb!.members[0]!.word.text).toBe('εἰδέναι');
+    expect(stilt.stilt!.clause!.slots.subj!.members[0]!.word.text).toBe('ὑμᾶς');
+    expect(() => parseSentence('sentence\nverb v\n  sub\n')).toThrow(/needs its conjunction/);
+    expect(() => parseSentence('sentence\nclause + καὶ\n  verb v\n')).toThrow(/no previous clause/);
   });
 });

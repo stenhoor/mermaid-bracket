@@ -91,6 +91,7 @@ export function layoutSentence(doc: SentenceDocument, measure: Measure, cfg: Sen
   let maxRight = x0;
   const verses: VerseList = [];
 
+  let previousBase: { x: number; y: number } | null = null;
   for (const clause of doc.clauses) {
     const conjSpace = clause.conj ? measure(clause.conj, 'conj') + cfg.pad : 0;
     // Lay out at base line y=0, then drop the whole clause so its highest content clears `y`.
@@ -98,6 +99,16 @@ export function layoutSentence(doc: SentenceDocument, measure: Measure, cfg: Sen
     const dy = y - Math.min(c.top, -fs * 1.4);
     prims.push(...c.prims.map((p) => shiftPrim(p, 0, dy)));
     verses.push(...c.verses.map((v) => ({ y: v.y + dy, text: v.text })));
+    // A clause joined to the one before is forked from it, the conjunction on the dotted line.
+    const baseX = x0 + conjSpace;
+    if (clause.join && previousBase) {
+      const jx = Math.min(previousBase.x, baseX) - cfg.slant;
+      prims.push({ kind: 'line', x1: jx, y1: previousBase.y, x2: previousBase.x, y2: previousBase.y, style: 'line' });
+      prims.push({ kind: 'line', x1: jx, y1: dy, x2: baseX, y2: dy, style: 'line' });
+      prims.push({ kind: 'line', x1: jx, y1: previousBase.y, x2: jx, y2: dy, style: 'dotted' });
+      prims.push({ kind: 'text', x: jx - 4, y: (previousBase.y + dy) / 2 + fs * 0.35, text: clause.join, cls: 'conj', anchor: 'end' });
+    }
+    previousBase = { x: baseX, y: dy };
     maxRight = Math.max(maxRight, c.right);
     y = c.bottom + dy + cfg.clauseGap;
   }
@@ -132,6 +143,22 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
   let bottom = baseY + fs * 0.7;
   let right = x0;
 
+  // Vocatives and absolutes ride on a shelf above the clause, joined by a dotted line.
+  let floatTop = 0;
+  if (clause.floating?.length) {
+    let fy = baseY - fs * 2.8;
+    for (const f of clause.floating) {
+      const text = f.kind === 'abs' ? `[${f.word.text}]` : f.word.text;
+      const w = measure(text, 'word');
+      const fx = x0 + cfg.pad;
+      prims.push({ kind: 'text', x: fx, y: fy, text, cls: 'word' });
+      prims.push({ kind: 'line', x1: fx - cfg.pad * 0.5, y1: fy + fs * 0.35, x2: fx + w + cfg.pad * 0.5, y2: fy + fs * 0.35, style: 'line' });
+      prims.push({ kind: 'line', x1: fx + w * 0.4, y1: fy + fs * 0.35, x2: fx + w * 0.4, y2: baseY - fs * 1.3, style: 'dotted' });
+      floatTop = Math.min(floatTop, fy - fs - baseY);
+      fy -= fs * 2.2;
+    }
+  }
+
   if (clause.conj) {
     // Short slant rising up-right from the start of the base line; the conjunction sits to its left.
     prims.push({ kind: 'line', x1: x0, y1: baseY, x2: x0 + cfg.slant, y2: baseY - cfg.slant, style: 'line' });
@@ -139,7 +166,7 @@ function layoutClause(clause: Clause, measure: Measure, cfg: SentenceConfig, x0:
   }
 
   const roles = SLOT_ORDER.filter((r) => clause.slots[r]);
-  let top = baseY - fs * 1.4;
+  let top = baseY - fs * 1.4 + Math.min(0, floatTop);
   let relAnchor: { x: number; y: number } | undefined;
   const drawMarker = (mx: number, role: SlotRole): void => {
     const h = fs * 1.15;
@@ -213,11 +240,53 @@ interface SlotSub extends Sub {
 }
 
 /**
+ * A standard: a small triangle on a stem, raising a clause into a slot, as Biblearc draws a
+ * substantival clause or infinitive. The clause is laid out above the base line.
+ */
+function layoutStilt(member: SlotMember, measure: Measure, cfg: SentenceConfig): SlotSub {
+  const fs = cfg.fontSize;
+  const prims: Prim[] = [];
+  const boxes: Box[] = [];
+  const verses: VerseList = [];
+  const stem = fs * 2.4;
+  const half = fs * 0.4;
+
+  prims.push({ kind: 'line', x1: 0, y1: 0, x2: -half, y2: -half * 1.6, style: 'line' });
+  prims.push({ kind: 'line', x1: 0, y1: 0, x2: half, y2: -half * 1.6, style: 'line' });
+  prims.push({ kind: 'line', x1: -half, y1: -half * 1.6, x2: half, y2: -half * 1.6, style: 'line' });
+  prims.push({ kind: 'line', x1: 0, y1: -half * 1.6, x2: 0, y2: -stem, style: 'line' });
+
+  let width = fs * 1.8;
+  const clause = member.stilt?.clause;
+  if (clause && Object.keys(clause.slots).length > 0) {
+    const c = layoutClause(clause, measure, cfg, 0, 0);
+    prims.push(...c.prims.map((pp) => shiftPrim(pp, -fs * 0.3, -stem)));
+    verses.push(...c.verses.map((v) => ({ y: v.y - stem, text: v.text })));
+    width = Math.max(width, c.right - fs * 0.3);
+  }
+  const h = layoutHangers(member.hangers, measure, cfg, 2, -stem);
+  prims.push(...h.prims);
+  boxes.push(...h.boxes);
+  verses.push(...h.verses);
+
+  return {
+    prims,
+    boxes,
+    verses,
+    height: Math.max(fs * 0.7, h.height - stem),
+    right: Math.max(width, h.right),
+    left: -half,
+    slotWidth: width + cfg.pad,
+  };
+}
+
+/**
  * One slot: a single word, or a fork of members. Frame origin = slot start on the base line.
  * Object-side forks open rightwards from the origin; the subject fork converges rightwards into
  * the predicate marker, so its members sit to the left of the convergence point (as Biblearc draws it).
  */
 function layoutSlot(slot: { members: SlotMember[] }, measure: Measure, cfg: SentenceConfig, leftward: boolean): SlotSub {
+  if (slot.members.length === 1 && slot.members[0]!.stilt) return layoutStilt(slot.members[0]!, measure, cfg);
   if (slot.members.length === 1) {
     const m = slot.members[0]!;
     const w = layoutWordOnLine(m.word, m.hangers, measure, cfg, 0, 0);
@@ -566,6 +635,25 @@ function layoutHangers(groups: HangerGroup[], measure: Measure, cfg: SentenceCon
         x = ex + cfg.pad * 0.5;
       }
       cursor = subBottom + cfg.gap;
+      continue;
+    }
+
+    if (g.kind === 'sub') {
+      // A subordinate clause sits below, reached by a slant carrying its conjunction.
+      for (const m of g.members) {
+        if (!m.clause) continue;
+        const cx = ax + cfg.slant * 2;
+        const cy = cursor + fs * 2.4;
+        const c = layoutClause(m.clause, measure, cfg, 0, 0);
+        prims.push({ kind: 'line', x1: ax, y1: ay, x2: cx, y2: cy, style: 'line' });
+        if (m.conjLabel) {
+          prims.push({ kind: 'text', x: (ax + cx) / 2 - 4, y: (ay + cy) / 2 + fs * 0.35, text: m.conjLabel, cls: 'conj', anchor: 'end' });
+        }
+        prims.push(...c.prims.map((pp) => shiftPrim(pp, cx, cy)));
+        verses.push(...c.verses.map((v) => ({ y: v.y + cy, text: v.text })));
+        right = Math.max(right, cx + c.right);
+        cursor = cy + c.bottom + cfg.gap;
+      }
       continue;
     }
 

@@ -62,7 +62,13 @@ so the `=` lines fork; `ὑμῖν` sits on the base line after the complement b
 | `inf T (Label)` | infinitive: the double-bar marker then the verb; an indented `subj` sits before the marker |
 | `obj`, `obj2`, `comp` indented under either | the verbal's own complements, each behind its marker on that shelf |
 
-Still to come: `stilt`, `sub`, `rel`, `voc`, `abs` and compound clauses.
+| `rel ROLE T` | relative clause below the antecedent, dashed link from its pronoun |
+| `sub CONJ` | subordinate clause on a slant labelled with the conjunction |
+| `obj stilt` | the slot is filled by a clause raised on a standard |
+| `voc T`, `abs T` | vocative or absolute on a floating shelf above the clause |
+| `clause + CONJ` | joins this clause to the previous one |
+
+See [Colossians 2:6–7](Sentence_Colossians_2_6-7.md) for those.
 
 ## With morphology tags
 
