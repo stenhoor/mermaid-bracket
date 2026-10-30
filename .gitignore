@@ -5,3 +5,9 @@ test-vault/.obsidian/workspace.json
 test-vault/.obsidian/workspace-mobile.json
 test-vault/.obsidian/cache/
 screenshots/
+
+# Private study notes. These hold long verbatim extracts from copyrighted commentaries
+# (Hansen PNTC, Fee NICNT, Hawthorne & Martin WBC, Melick NAC) and the full text of the
+# Charles Simeon Trust Worksheet Preparation Guide. This repository is public, so they
+# stay local. The study documents in studies/ are original work with short attributed quotes.
+studies/research-notes/
